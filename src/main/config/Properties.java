@@ -9,7 +9,7 @@ public class Properties {
 
     public static String appName			= "backuper-client";
     public static String appDataDir 		= System.getenv("APPDATA") + "\\" + appName + "\\";
-    public static String globalConfigFile	= "config.dat";
+    public static String globalConfigFile	= "globalConfig.dat";
 
 }
 

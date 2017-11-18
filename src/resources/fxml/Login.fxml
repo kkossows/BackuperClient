@@ -9,18 +9,19 @@
 
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1" fx:controller="main.view.LoginController">
    <children>
-      <Button fx:id="btn_login" layoutX="174.0" layoutY="280.0" mnemonicParsing="false" onAction="#btn_login_onClick" prefHeight="54.0" prefWidth="139.0" text="LOGIN" />
-      <Button fx:id="btn_register" layoutX="338.0" layoutY="280.0" mnemonicParsing="false" onAction="#btn_register_onClick" prefHeight="54.0" prefWidth="139.0" text="REGISTER" />
-      <Label layoutX="273.0" layoutY="48.0" text="BACKUPER" />
-      <Button fx:id="btn_quit" layoutX="175.0" layoutY="352.0" mnemonicParsing="false" onAction="#btn_quit_onClick" prefHeight="34.0" prefWidth="304.0" text="QUIT" />
-      <Label layoutX="197.0" layoutY="95.0" text="Server IP" />
-      <TextField fx:id="tx_serverIp" alignment="CENTER" layoutX="269.0" layoutY="91.0" text="127.0.0.1" />
-      <Label layoutX="192.0" layoutY="132.0" text="Server Port" />
-      <TextField fx:id="tx_serverPort" alignment="CENTER" layoutX="269.0" layoutY="128.0" />
-      <Label layoutX="194.0" layoutY="165.0" text="Username" />
-      <TextField fx:id="tx_username" alignment="CENTER" layoutX="269.0" layoutY="161.0" />
-      <Label layoutX="196.0" layoutY="204.0" text="Password" />
-      <PasswordField fx:id="tx_password" alignment="CENTER" layoutX="269.0" layoutY="200.0" />
-      <CheckBox fx:id="cbox_remember" layoutX="210.0" layoutY="239.0" mnemonicParsing="false" prefHeight="16.0" prefWidth="217.0" text="Remember me" />
+      <Button fx:id="btn_login" layoutX="167.0" layoutY="271.0" mnemonicParsing="false" onAction="#btn_login_onClick" prefHeight="54.0" prefWidth="139.0" text="LOGIN" />
+      <Button fx:id="btn_register" layoutX="331.0" layoutY="271.0" mnemonicParsing="false" onAction="#btn_register_onClick" prefHeight="54.0" prefWidth="139.0" text="REGISTER" />
+      <Label layoutX="274.0" layoutY="24.0" text="BACKUPER" />
+      <Button fx:id="btn_quit" layoutX="168.0" layoutY="343.0" mnemonicParsing="false" onAction="#btn_quit_onClick" prefHeight="34.0" prefWidth="304.0" text="QUIT" />
+      <Label layoutX="174.0" layoutY="74.0" prefHeight="16.0" prefWidth="73.0" text="Server IP" />
+      <TextField fx:id="tx_serverIp" alignment="CENTER" layoutX="276.0" layoutY="70.0" prefHeight="24.0" prefWidth="198.0" />
+      <Label layoutX="167.0" layoutY="103.0" prefHeight="16.0" prefWidth="73.0" text="Server Port" />
+      <TextField fx:id="tx_serverPort" alignment="CENTER" layoutX="275.0" layoutY="99.0" prefHeight="24.0" prefWidth="198.0" />
+      <Label layoutX="174.0" layoutY="172.0" prefHeight="16.0" prefWidth="73.0" text="Username" />
+      <TextField fx:id="tx_username" alignment="CENTER" layoutX="276.0" layoutY="168.0" prefHeight="24.0" prefWidth="198.0" />
+      <Label layoutX="175.0" layoutY="203.0" prefHeight="16.0" prefWidth="73.0" text="Password" />
+      <PasswordField fx:id="tx_password" alignment="CENTER" layoutX="275.0" layoutY="199.0" prefHeight="24.0" prefWidth="198.0" />
+      <CheckBox fx:id="cbox_remember" layoutX="276.0" layoutY="235.0" mnemonicParsing="false" prefHeight="16.0" prefWidth="102.0" text="Remember me" />
+      <CheckBox fx:id="cbox_serverRemember" layoutX="276.0" layoutY="136.0" mnemonicParsing="false" prefHeight="16.0" prefWidth="198.0" text="Save server variables as default" />
    </children>
 </AnchorPane>

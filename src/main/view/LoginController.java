@@ -11,6 +11,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
 import main.config.ConfigDataManager;
 import main.config.GlobalConfig;
+import main.config.UserConfig;
 import main.networking.ServerHandler;
 import main.user.User;
 
@@ -37,6 +38,8 @@ public class LoginController implements Initializable{
     private PasswordField tx_password;
     @FXML
     private CheckBox cbox_remember;
+    @FXML
+    private CheckBox cbox_serverRemember;
 
 
     //-------------Other variables
@@ -45,20 +48,37 @@ public class LoginController implements Initializable{
     //-------------FXML Methodes
     /*
     Metoda sprawdzająca, czy mozna wczytac dane z plików konfiguracyjnych, jezeli istnieją.
-    1) jeżeli plik istnieje to wyciągnij z niego dane na temat serwera
+    1) jeżeli plik istnieje to wyciągnij z niego dane na temat serwera (to są domyślne dane)
     2) jeżeli w pliku znajduje się nazwa użytkownika to otwórz plik i wpisz dane użytkownika z pliku konfig.
     3) jeżeli nie istnieje, to nic nie rób - przy pierwszym logowaniu stworzy się plik
+    - jeżeli użytkownik wciśnie save server vatiables to zapisuje sie plik global
+    - jeżeli remember me to zapisujemy wszystko i tak wszystko odczytujemy
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         if (ConfigDataManager.isGlobalConfigFileExists()){
             GlobalConfig globalConfig = ConfigDataManager.readGlobalConfig();
 
-            tx_serverIp.setText(globalConfig.getServerIpAddress());
-            tx_serverPort.setText(Integer.toString(globalConfig.getServerPortNumber()));
-
             if(globalConfig.isSavedUserLoginSet()){
+                boolean userFileExist = ConfigDataManager.isUserConfigFileExists(globalConfig.getSavedUserLogin());
 
+                if (userFileExist){
+                    UserConfig userConfig = ConfigDataManager.readUserConfig(globalConfig.getSavedUserLogin());
+                    tx_serverIp.setText(userConfig.getServerIp());
+                    tx_serverPort.setText(Integer.toString(userConfig.getServerPortNumber()));
+                    tx_username.setText(userConfig.getUsername());
+                    tx_password.setText(userConfig.getPassword());
+                }
+                else {
+                    //jeżeli ktoś usunął plik, to usuwamy linijkę mówiącą o zapisanym użytkowniku z pliku konf
+                    globalConfig.setSavedUserLogin("");
+                    ConfigDataManager.createGlobalConfig(globalConfig);
+                }
+            }
+            else {
+                //read default server settings
+                tx_serverIp.setText(globalConfig.getServerIpAddress());
+                tx_serverPort.setText(Integer.toString(globalConfig.getServerPortNumber()));
             }
         }
     }
@@ -82,8 +102,41 @@ public class LoginController implements Initializable{
                     tx_username.getText().trim(), tx_username.getText().trim());
 
             if(authenticationSuccess){
-                User currentUser = new User();
-                ///DODODODODOODODODO
+                //aktualizacja plików konfiguracyjnych
+                if(cbox_serverRemember.isSelected() ){
+                    GlobalConfig newGlobalConfig = new GlobalConfig();
+                    newGlobalConfig.setServerIpAddress(tx_serverIp.getText());
+                    newGlobalConfig.setServerPortNumber(Integer.getInteger(tx_serverPort.getText()));
+
+                    if (cbox_remember.isSelected())
+                        newGlobalConfig.setSavedUserLogin(tx_username.getText());
+                    else
+                        newGlobalConfig.setSavedUserLogin("");
+                    ConfigDataManager.createGlobalConfig(newGlobalConfig);
+                }
+                if (cbox_remember.isSelected()){
+                    UserConfig newUserConfig = new UserConfig();
+                    newUserConfig.setUsername(tx_username.getText());
+                    newUserConfig.setPassword(tx_password.getText());
+                    newUserConfig.setServerIp(tx_serverIp.getText());
+                    newUserConfig.setServerPortNumber(Integer.getInteger(tx_serverPort.getText()));
+
+                    ConfigDataManager.createUserConfig(newUserConfig);
+                }
+
+                //stwórz bierzącego użytkownika
+                User currentUser = new User(tx_username.getText(), serverHandler);
+
+                //przełącz sceny z logowania na główną scene aplikacji
+                AnchorPane appPane = null;
+                try {
+                    appPane = FXMLLoader.load(getClass().getResource("/fxml/App.fxml"));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                Scene appScene = new Scene(appPane);
+                Stage primaryStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                primaryStage.setScene(appScene);
 
             }
             else {
@@ -180,16 +233,4 @@ public class LoginController implements Initializable{
         alert.showAndWait();
     }
 
-
-
-
-
-
-    /*
-    //przykład na zmianę scenografi
-        AnchorPane appPane = FXMLLoader.load(getClass().getResource("/fxml/App.fxml"));
-        Scene appScene = new Scene(appPane);
-        Stage primaryStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        primaryStage.setScene(appScene);
-     */
 }
