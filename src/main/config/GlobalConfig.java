@@ -8,44 +8,85 @@ import java.io.Serializable;
  */
 public class GlobalConfig implements Serializable {
 
-    private String serverIpAddress;
-    private int serverPortNumber;
-    private String savedUserLogin;
+    private String defaultServerIpAddress;
+    private int defaultServerPortNumber;
 
+    private String savedServerIpAddress;
+    private int savedServerPortNumber;
+    private String savedUsername;
+    private String savedPassword;
+
+
+    //set default values
     public GlobalConfig(){
+        this.defaultServerIpAddress = Properties.defaultServerIpAddress;
+        this.defaultServerPortNumber = Properties.defaultServerPortNumber;
+
+        this.savedServerIpAddress = "";
+        this.savedServerPortNumber = 0;
+        this.savedUsername = "";
+        this.savedPassword = "";
 
     }
 
-
-    public String getServerIpAddress() {
-        return serverIpAddress;
-    }
-
-    public void setServerIpAddress(String serverIpAddress) {
-        this.serverIpAddress = serverIpAddress;
-    }
-
-    public int getServerPortNumber() {
-        return serverPortNumber;
-    }
-
-    public void setServerPortNumber(int serverPortNumber) {
-        this.serverPortNumber = serverPortNumber;
-    }
-
-    public String getSavedUserLogin() {
-        return savedUserLogin;
-    }
-
-    public void setSavedUserLogin(String savedUserLogin) {
-        this.savedUserLogin = savedUserLogin;
-    }
-
-    public boolean isSavedUserLoginSet()
-    {
-        if(savedUserLogin == null || savedUserLogin == "")
-            return false;
-        else
+    //If globalConfig has tsaved values, it means that sb checked remember checkbox
+    public boolean isUserRemembered(){
+        if (savedServerIpAddress != ""
+                && savedServerPortNumber != 0
+                && savedUsername != ""
+                && savedPassword != "")
             return true;
+        else
+            return false;
+    }
+
+
+
+    public String getDefaultServerIpAddress() {
+        return defaultServerIpAddress;
+    }
+
+    public void setDefaultServerIpAddress(String defaultServerIpAddress) {
+        this.defaultServerIpAddress = defaultServerIpAddress;
+    }
+
+    public int getDefaultServerPortNumber() {
+        return defaultServerPortNumber;
+    }
+
+    public void setDefaultServerPortNumber(int defaultServerPortNumber) {
+        this.defaultServerPortNumber = defaultServerPortNumber;
+    }
+
+    public String getSavedServerIpAddress() {
+        return savedServerIpAddress;
+    }
+
+    public void setSavedServerIpAddress(String savedServerIpAddress) {
+        this.savedServerIpAddress = savedServerIpAddress;
+    }
+
+    public int getSavedServerPortNumber() {
+        return savedServerPortNumber;
+    }
+
+    public void setSavedServerPortNumber(int savedServerPortNumber) {
+        this.savedServerPortNumber = savedServerPortNumber;
+    }
+
+    public String getSavedUsername() {
+        return savedUsername;
+    }
+
+    public void setSavedUsername(String savedUsername) {
+        this.savedUsername = savedUsername;
+    }
+
+    public String getSavedPassword() {
+        return savedPassword;
+    }
+
+    public void setSavedPassword(String savedPassword) {
+        this.savedPassword = savedPassword;
     }
 }

@@ -1,11 +1,10 @@
 package main.networking;
 
 import javax.swing.*;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
+import java.lang.reflect.Array;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -54,14 +53,14 @@ public class ServerHandler {
      */
     public boolean authenticateUser(String username, String password) {
         try {
-            out.println(ClientMessage.LOG_IN);
-            if (in.readLine() == ServerMessage.SEND_USERNAME.name()) {
+            out.println(ClientMessage.LOG_IN.name());
+            if (in.readLine().equals(ServerMessage.SEND_USERNAME.name())) {
                 out.println(username);
-                if (in.readLine() == ServerMessage.SEND_PASSWORD.name()) {
+                if (in.readLine().equals(ServerMessage.SEND_PASSWORD.name())) {
                     out.println(password);
-                    if (in.readLine() == ServerMessage.LOGIN_SUCCESS.name()) {
+                    if (in.readLine().equals(ServerMessage.LOGIN_SUCCESS.name())) {
                         return true;
-                    } else if (in.readLine() == ServerMessage.LOGIN_FAILED.name()) {
+                    } else if (in.readLine().equals(ServerMessage.LOGIN_FAILED.name())) {
                         return false;
                     }
                 }
@@ -82,15 +81,15 @@ public class ServerHandler {
      */
     public boolean registerUser(String username, String password) {
         try {
-            out.println(ClientMessage.REGISTER);
-            if (in.readLine() == ServerMessage.SEND_USERNAME.name()) {
+            out.println(ClientMessage.REGISTER.name());
+            if (in.readLine().equals(ServerMessage.SEND_USERNAME.name())) {
                 out.println(username);
-                if (in.readLine() == ServerMessage.SEND_PASSWORD.name()) {
+                if (in.readLine().equals(ServerMessage.SEND_PASSWORD.name())) {
                     out.println(password);
-                    if (in.readLine() == ServerMessage.USER_CREATED.name()) {
+                    if (in.readLine().equals(ServerMessage.USER_CREATED.name())) {
                         return true;
                     }
-                    else if(in.readLine() == ServerMessage.USER_EXISTS.name()){
+                    else if(in.readLine().equals(ServerMessage.USER_EXISTS.name())){
                         return false;
                     }
                 }
@@ -102,5 +101,32 @@ public class ServerHandler {
 
         //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
         return false;
+    }
+
+
+    /*
+    Metoda odpowiedzialna za pobranie absolutnych ścieżek plików, znajdujących się na serwerze.
+    Metoda zwraca listę obiektów typu File (analogiczna lista jest w klasie User).
+     */
+    public ArrayList<File> getBackupFilesListFromServer(){
+        ArrayList<File> backupFiles= new ArrayList<>();
+
+        try {
+            out.println(ClientMessage.GET_BACKUP_FILES_LIST.name());
+            if (in.readLine().equals(ServerMessage.SENDING_BACKUP_FILES_LIST.name())) {
+                String nextMessageLine = in.readLine();
+                while (nextMessageLine.equals(ServerMessage.SENDING_BACKUP_FILES_LIST_FINISHED.name()))
+                {
+                    backupFiles.add(new File(nextMessageLine));
+                    nextMessageLine = in.readLine();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return backupFiles;
+        }
+
+        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
+        return backupFiles;
     }
 }

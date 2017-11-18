@@ -11,6 +11,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
 import main.config.ConfigDataManager;
 import main.config.GlobalConfig;
+import main.config.Properties;
 import main.config.UserConfig;
 import main.networking.ServerHandler;
 import main.user.User;
@@ -38,8 +39,7 @@ public class LoginController implements Initializable{
     private PasswordField tx_password;
     @FXML
     private CheckBox cbox_remember;
-    @FXML
-    private CheckBox cbox_serverRemember;
+
 
 
     //-------------Other variables
@@ -48,48 +48,38 @@ public class LoginController implements Initializable{
     //-------------FXML Methodes
     /*
     Metoda sprawdzająca, czy mozna wczytac dane z plików konfiguracyjnych, jezeli istnieją.
-    1) jeżeli plik istnieje to wyciągnij z niego dane na temat serwera (to są domyślne dane)
-    2) jeżeli w pliku znajduje się nazwa użytkownika to otwórz plik i wpisz dane użytkownika z pliku konfig.
-    3) jeżeli nie istnieje, to nic nie rób - przy pierwszym logowaniu stworzy się plik
-    - jeżeli użytkownik wciśnie save server vatiables to zapisuje sie plik global
-    - jeżeli remember me to zapisujemy wszystko i tak wszystko odczytujemy
+    - jeżeli plik nie istnieje, to tworzymy go z domyslnymi wartościami;
+    - jeżeli plik zawiera wszystkie zmienne zapisanego użytkownika, to wpisz je automatycznie
+    - jeżeli plik nie zawiera wszystkich zmiennych, wpisz wartości domyślne z pliku konfiguracyjnego dotyczące serwer
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        if (ConfigDataManager.isGlobalConfigFileExists()){
-            GlobalConfig globalConfig = ConfigDataManager.readGlobalConfig();
+        //if global config file not exist, create it with default variables
+        if (!ConfigDataManager.isGlobalConfigFileExists()) {
+            ConfigDataManager.createGlobalConfig(new GlobalConfig());
+        }
 
-            if(globalConfig.isSavedUserLoginSet()){
-                boolean userFileExist = ConfigDataManager.isUserConfigFileExists(globalConfig.getSavedUserLogin());
-
-                if (userFileExist){
-                    UserConfig userConfig = ConfigDataManager.readUserConfig(globalConfig.getSavedUserLogin());
-                    tx_serverIp.setText(userConfig.getServerIp());
-                    tx_serverPort.setText(Integer.toString(userConfig.getServerPortNumber()));
-                    tx_username.setText(userConfig.getUsername());
-                    tx_password.setText(userConfig.getPassword());
-                }
-                else {
-                    //jeżeli ktoś usunął plik, to usuwamy linijkę mówiącą o zapisanym użytkowniku z pliku konf
-                    globalConfig.setSavedUserLogin("");
-                    ConfigDataManager.createGlobalConfig(globalConfig);
-                }
-            }
-            else {
-                //read default server settings
-                tx_serverIp.setText(globalConfig.getServerIpAddress());
-                tx_serverPort.setText(Integer.toString(globalConfig.getServerPortNumber()));
-            }
+        GlobalConfig globalConfig = ConfigDataManager.readGlobalConfig();
+        if (globalConfig.isUserRemembered()) {
+            tx_serverIp.setText(globalConfig.getSavedServerIpAddress());
+            tx_serverPort.setText(Integer.toString(globalConfig.getSavedServerPortNumber()));
+            tx_username.setText(globalConfig.getSavedUsername());
+            tx_password.setText(globalConfig.getSavedPassword());
+        } else {
+            tx_serverIp.setText(globalConfig.getDefaultServerIpAddress());
+            tx_serverPort.setText(Integer.toString(globalConfig.getDefaultServerPortNumber()));
         }
     }
+
 
     /*
     Metoda składająca się z następujących elmentów
      1) sprawdź, czy serwer jest online
      2) stworz dedykowanego ServerHandlera i spróbuj się zalogować
-     3) stwórz obiekt klienta
-     4) zmień scene na aplikacje
-     5) przekaź klienta do kontrolera aplikacji
+     3) jeżeli użytkownik zaznaczył checkbox, zapisz dane do pliku globalconfig
+     4) stwórz obiekt klienta
+     5) zmień scene na aplikacje
+     6) przekaź klienta do kontrolera aplikacji
      */
     @FXML
     void btn_login_onClick(ActionEvent event) {
@@ -103,41 +93,38 @@ public class LoginController implements Initializable{
 
             if(authenticationSuccess){
                 //aktualizacja plików konfiguracyjnych
-                if(cbox_serverRemember.isSelected() ){
-                    GlobalConfig newGlobalConfig = new GlobalConfig();
-                    newGlobalConfig.setServerIpAddress(tx_serverIp.getText());
-                    newGlobalConfig.setServerPortNumber(Integer.getInteger(tx_serverPort.getText()));
-
-                    if (cbox_remember.isSelected())
-                        newGlobalConfig.setSavedUserLogin(tx_username.getText());
-                    else
-                        newGlobalConfig.setSavedUserLogin("");
-                    ConfigDataManager.createGlobalConfig(newGlobalConfig);
-                }
                 if (cbox_remember.isSelected()){
-                    UserConfig newUserConfig = new UserConfig();
-                    newUserConfig.setUsername(tx_username.getText());
-                    newUserConfig.setPassword(tx_password.getText());
-                    newUserConfig.setServerIp(tx_serverIp.getText());
-                    newUserConfig.setServerPortNumber(Integer.getInteger(tx_serverPort.getText()));
+                    GlobalConfig newGlobalConfig = new GlobalConfig();
 
-                    ConfigDataManager.createUserConfig(newUserConfig);
+                    newGlobalConfig.setDefaultServerIpAddress(Properties.defaultServerIpAddress);
+                    newGlobalConfig.setDefaultServerPortNumber(Properties.defaultServerPortNumber);
+
+                    newGlobalConfig.setSavedServerIpAddress(tx_serverIp.getText());
+                    newGlobalConfig.setSavedServerPortNumber(Integer.getInteger(tx_serverPort.getText()));
+                    newGlobalConfig.setSavedUsername(tx_username.getText());
+                    newGlobalConfig.setSavedPassword(tx_password.getText());
+
+                    ConfigDataManager.createGlobalConfig(newGlobalConfig);
                 }
 
                 //stwórz bierzącego użytkownika
                 User currentUser = new User(tx_username.getText(), serverHandler);
+                AppController appController = new AppController();
+                appController.setUser(currentUser);
 
                 //przełącz sceny z logowania na główną scene aplikacji
+                //(zrobione inaczej aby dodać już utworzony kontroler)
                 AnchorPane appPane = null;
                 try {
-                    appPane = FXMLLoader.load(getClass().getResource("/fxml/App.fxml"));
+                    FXMLLoader loader = new FXMLLoader();
+                    loader.setController(appController);
+                    appPane = loader.load(getClass().getResource("/fxml/App.fxml"));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
                 Scene appScene = new Scene(appPane);
                 Stage primaryStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
                 primaryStage.setScene(appScene);
-
             }
             else {
                 showWarningDialog("AUTHENTICATION ERROR", "User not registered or password incorrect");

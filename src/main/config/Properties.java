@@ -11,5 +11,8 @@ public class Properties {
     public static String appDataDir 		= System.getenv("APPDATA") + "\\" + appName + "\\";
     public static String globalConfigFile	= "globalConfig.dat";
 
+    public static String defaultServerIpAddress = "127.0.0.1";
+    public static int defaultServerPortNumber = 9889;
+
 }
 

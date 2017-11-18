@@ -1,6 +1,8 @@
 package main.config;
 
+import java.io.File;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * Klasa opisująca pliki konfiguracyjne dotyczące poszczególnych użytkowników.
@@ -8,25 +10,10 @@ import java.io.Serializable;
  */
 public class UserConfig implements Serializable {
     String username;
-    String password;
-    String serverIp;
-    int serverPortNumber;
+    List<File> userFilesToArchive;
 
-    public String getServerIp() {
-        return serverIp;
-    }
 
-    public void setServerIp(String serverIp) {
-        this.serverIp = serverIp;
-    }
 
-    public int getServerPortNumber() {
-        return serverPortNumber;
-    }
-
-    public void setServerPortNumber(int serverPortNumber) {
-        this.serverPortNumber = serverPortNumber;
-    }
 
     public String getUsername() {
         return username;
@@ -36,11 +23,11 @@ public class UserConfig implements Serializable {
         this.username = username;
     }
 
-    public String getPassword() {
-        return password;
+    public List<File> getUserFilesToArchive() {
+        return userFilesToArchive;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    public void setUserFilesToArchive(List<File> userFilesToArchive) {
+        this.userFilesToArchive = userFilesToArchive;
     }
 }

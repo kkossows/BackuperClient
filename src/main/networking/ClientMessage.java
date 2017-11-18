@@ -6,5 +6,7 @@ package main.networking;
 public enum  ClientMessage {
     LOG_IN,
     REGISTER,
+    GET_BACKUP_FILES_LIST,
+
     EXIT;
 }

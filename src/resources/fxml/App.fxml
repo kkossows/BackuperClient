@@ -1,16 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ToolBar?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-
-<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1" fx:controller="main.view.AppController">
+<AnchorPane prefHeight="400.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1" fx:controller="main.view.AppController">
    <children>
-      <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0">
+      <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="800.0">
+         <top>
+            <MenuBar BorderPane.alignment="CENTER">
+              <menus>
+                <Menu mnemonicParsing="false" text="Settings">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Disable autocomplete" />
+                        <MenuItem mnemonicParsing="false" text="Remove profile" />
+                  </items>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Help">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="About" />
+                  </items>
+                </Menu>
+              </menus>
+            </MenuBar>
+         </top>
+         <left>
+            <VBox alignment="CENTER" prefHeight="336.0" prefWidth="233.0" BorderPane.alignment="CENTER">
+               <children>
+                  <Label text="Files to archive" />
+                  <ListView fx:id="lv_filesToArchive" prefHeight="200.0" prefWidth="219.0" />
+                  <Button fx:id="btn_addFile" mnemonicParsing="false" onAction="#btn_addFile_OnClick" prefHeight="24.0" prefWidth="262.0" text="Add file" />
+                  <Button fx:id="btn_removeFile" mnemonicParsing="false" onAction="#btn_removeFile_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove File" />
+                  <Button mnemonicParsing="false" prefHeight="33.0" prefWidth="271.0" text="Buckup only selected one" textOverrun="WORD_ELLIPSIS" />
+               </children>
+            </VBox>
+         </left>
+         <right>
+            <HBox BorderPane.alignment="CENTER">
+               <children>
+                  <VBox alignment="CENTER" prefHeight="336.0" prefWidth="210.0">
+                     <children>
+                        <Label text="Files on server:" />
+                        <ListView fx:id="lv_filesOnServer" prefHeight="200.0" prefWidth="184.0" />
+                        <Button mnemonicParsing="false" prefWidth="214.0" text="Show file versions" />
+                        <Button mnemonicParsing="false" prefWidth="214.0" text="Remove file" />
+                     </children>
+                  </VBox>
+                  <VBox alignment="CENTER" layoutX="10.0" layoutY="10.0" prefHeight="336.0" prefWidth="212.0">
+                     <children>
+                        <Label text="File versions:" />
+                        <ListView fx:id="lv_fileVersions" prefHeight="200.0" prefWidth="142.0" />
+                        <Button mnemonicParsing="false" prefWidth="214.0" text="Restore selected file" />
+                        <Button mnemonicParsing="false" prefWidth="214.0" text="Remove file version" />
+                     </children>
+                  </VBox>
+               </children>
+            </HBox>
+         </right>
          <center>
-            <Label text="GIT" BorderPane.alignment="CENTER" />
+            <VBox alignment="TOP_CENTER" prefHeight="336.0" prefWidth="149.0" BorderPane.alignment="CENTER">
+               <children>
+                  <Region prefHeight="40.0" prefWidth="145.0" />
+                  <Label text="User" />
+                  <Label fx:id="lb_username" text="username">
+                     <font>
+                        <Font size="15.0" />
+                     </font>
+                  </Label>
+                  <Region prefHeight="75.0" prefWidth="145.0" />
+                  <Button mnemonicParsing="false" text="Buckup ALL" />
+               </children>
+            </VBox>
          </center>
+         <bottom>
+            <ToolBar orientation="VERTICAL" prefHeight="40.0" prefWidth="809.0" BorderPane.alignment="TOP_LEFT">
+              <items>
+                <Button mnemonicParsing="false" text="Quit" />
+              </items>
+            </ToolBar>
+         </bottom>
       </BorderPane>
    </children>
 </AnchorPane>
