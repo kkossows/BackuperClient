@@ -5,9 +5,15 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import javafx.stage.Window;
+import main.config.ConfigDataManager;
+import main.config.UserConfig;
 import main.user.User;
 
 import java.io.File;
@@ -33,10 +39,7 @@ public class AppController implements Initializable{
     private ListView<String> lv_fileVersions;
     private ObservableList<String> fileVersions = FXCollections.observableArrayList();
 
-    @FXML
-    private Button btn_addFile;
-    @FXML
-    private Button btn_removeFile;
+
 
     //----------------------Other Variables
     private User user;
@@ -73,11 +76,73 @@ public class AppController implements Initializable{
 
     @FXML
     public void btn_addFile_OnClick(ActionEvent event) {
+        FileChooser fileChooser = new FileChooser();
+        //new window has to be closed to continue operation on main window
+        //otherwise chande stage showOpenDialog(...) to showOpenDialog(null)
+        File file = fileChooser.showOpenDialog((Stage) ((Node) event.getSource()).getScene().getWindow());
+        if (file != null) {
+            filesToArchive.add(file);
+        }
 
+        //only with closing the app, userConfigFile is updated
     }
     @FXML
     public void btn_removeFile_OnClick(ActionEvent event) {
+        int index = lv_filesToArchive.getSelectionModel().getSelectedIndex();
+        if (index > -1) {
+            filesToArchive.remove(index);
+        }
+    }
+    @FXML
+    public void btn_removeAllFiles_OnClick(ActionEvent event){
+        filesToArchive.clear();
+    }
 
+
+    @FXML
+    public void btn_backupOnlySelected_OnClick(ActionEvent event){
+
+    }
+    @FXML
+    public void btn_backupAll_OnClick(ActionEvent event){
+
+    }
+
+
+    @FXML
+    public void btn_showVersionFile_OnClick(ActionEvent event){
+
+    }
+    @FXML
+    public void btn_removeFileFromServer_OnClick(ActionEvent event){
+        //methode remove all versions of selected file
+    }
+    @FXML
+    public void btn_restoreSelectedFileVersion_OnClick(ActionEvent event){
+
+    }
+    @FXML
+    public void btn_removeFileVersion_OnClick(ActionEvent event){
+
+    }
+
+
+    @FXML
+    public void btn_quit_OnClick(ActionEvent event){
+        //update userConfigFile
+        UserConfig newUserConfig = new UserConfig();
+        newUserConfig.setUsername(user.getUsername());
+        newUserConfig.setUserFilesToArchive(filesToArchive);
+        ConfigDataManager.createUserConfig(newUserConfig);
+
+        //close main stage
+        Stage primaryStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        primaryStage.close();
+    }
+    @FXML
+    public void btn_minimize_OnClick(ActionEvent event){
+        Stage primaryStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        primaryStage.setIconified(true);
     }
 
 
@@ -89,6 +154,4 @@ public class AppController implements Initializable{
     public void setUser(User user){
         this.user = user;
     }
-
-
 }

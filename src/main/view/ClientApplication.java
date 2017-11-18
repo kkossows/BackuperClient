@@ -7,6 +7,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
 /**
@@ -21,14 +22,8 @@ public class ClientApplication extends Application {
          */
         Parent rootPane = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
         Scene loginScene = new Scene(rootPane);
+        primaryStage.initStyle(StageStyle.UNDECORATED);
         primaryStage.setScene(loginScene);
-        primaryStage.setTitle("BACKUPER");
-        primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
-            @Override
-            public void handle(WindowEvent event) {
-                System.exit(0);
-            }
-        });
         primaryStage.show();
 
     }
