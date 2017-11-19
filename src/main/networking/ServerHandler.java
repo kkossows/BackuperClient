@@ -1,8 +1,12 @@
 package main.networking;
 
+import javafx.collections.ObservableList;
+import main.view.AppController;
+
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by rkossowski on 18.11.2017.
@@ -256,5 +260,47 @@ public class ServerHandler {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+
+    /**
+     * Metoda tworzy listę jednoelementową plików oraz uruchamia metodę backupAllFiles
+     * @param fileToArchive
+     * @param appController
+     */
+    public void backupOnlySelectedFile(File fileToArchive, AppController appController) {
+        ArrayList<File> filesToArchive = new ArrayList<>();
+        filesToArchive.add(fileToArchive);
+
+        backupAllFiles(filesToArchive, appController);
+    }
+
+    /**
+     * Metoda odpowiedzialna za uruchomienie nowego wątku związanego z obsługą procesu archiwizacji danych.
+     * @param filesToArchive
+     * @param appController
+     */
+    public void backupAllFiles(List<File> filesToArchive, AppController appController) {
+        BackupWorker backupWorker = new BackupWorker(
+                socket, in, out,
+                filesToArchive,
+                appController );
+        Thread backupThread = new Thread(backupWorker);
+        backupThread.start();
+    }
+
+    /**
+     * Metoda odpowiedzialna za uruchomienie nowego wątku związanego z obsługą procesu związanego z pobraniem
+     * wybranego archiwum z serwera.
+     * @param filePath
+     * @param fileVersion
+     */
+    public void restoreSelectedFileVersion(String filePath, String fileVersion, AppController appController){
+        RestoreWorker restoreWorker = new RestoreWorker(
+                socket, in, out,
+                filePath, fileVersion,
+                appController );
+        Thread restoreThread = new Thread(restoreWorker);
+        restoreThread.start();
     }
 }

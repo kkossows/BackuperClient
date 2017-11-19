@@ -32,6 +32,12 @@ public class AppController implements Initializable{
     private Label lb_username;
     @FXML
     private Label lb_fileName;
+    @FXML
+    private Label lb_statistics_number;
+    @FXML
+    private Label lb_statistics_percent;
+    @FXML
+    private Label lb_statistics_percentRestoring;
 
     @FXML
     private ListView<File> lv_filesToArchive;
@@ -52,15 +58,13 @@ public class AppController implements Initializable{
 
 
 
-
-
     //----------------------FXML Methodes
-    /*
-    Metoda inicjalizuje wszystkie pola:
-    1) wpisuje zalogowane użytkownika w miejsce username
-    2) wczytuje wszystkie pliki do archiwizacji używane przez użytkownika
-    3) wczytuje wszystkie pliki zarchiwizowane na serwerze
-    4) przypisuje wszystkie obserwowane listy do ich reprezentacji w widoku
+    /**
+     * Metoda inicjalizuje wszystkie pola:
+     * 1) wpisuje zalogowane użytkownika w miejsce username
+     * 2) wczytuje wszystkie pliki do archiwizacji używane przez użytkownika
+     * 3) wczytuje wszystkie pliki zarchiwizowane na serwerze
+     * 4) przypisuje wszystkie obserwowane listy do ich reprezentacji w widoku
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -91,7 +95,7 @@ public class AppController implements Initializable{
     public void btn_addFile_OnClick(ActionEvent event) {
         FileChooser fileChooser = new FileChooser();
         //new window has to be closed to continue operation on main window
-        //otherwise chande stage showOpenDialog(...) to showOpenDialog(null)
+        //otherwise change stage showOpenDialog(...) to showOpenDialog(null)
         File file = fileChooser.showOpenDialog((Stage) ((Node) event.getSource()).getScene().getWindow());
         if (file != null) {
             filesToArchive.add(file);
@@ -105,6 +109,12 @@ public class AppController implements Initializable{
         if (index > -1) {
             filesToArchive.remove(index);
         }
+        else {
+            showWarningDialog(
+                    "Error",
+                    "No file selected. Please first select the file and press button again."
+            ) ;
+        }
     }
     @FXML
     public void btn_removeAllFiles_OnClick(ActionEvent event){
@@ -113,12 +123,28 @@ public class AppController implements Initializable{
 
 
     @FXML
-    public void btn_backupOnlySelected_OnClick(ActionEvent event){
-
+    public void btn_backupAll_OnClick(ActionEvent event){
+        user.getServerHandler().backupAllFiles(
+                filesToArchive,
+                this
+        );
     }
     @FXML
-    public void btn_backupAll_OnClick(ActionEvent event){
-
+    public void btn_backupOnlySelected_OnClick(ActionEvent event) {
+        //check if user selected file
+        int index = lv_filesToArchive.getSelectionModel().getSelectedIndex();
+        if (index > -1) {
+            user.getServerHandler().backupOnlySelectedFile(
+                    filesToArchive.get(index),
+                    this
+            );
+        }
+        else {
+            showWarningDialog(
+                    "Error",
+                    "No file selected. Please first select the file and press button again."
+            ) ;
+        }
     }
 
 
@@ -138,55 +164,83 @@ public class AppController implements Initializable{
     }
     @FXML
     public void btn_removeFileFromServer_OnClick(ActionEvent event){
-        //methode remove all versions of selected file
+        //method remove all versions of selected file
         int indexOfSelectedFile = lv_filesOnServer.getSelectionModel().getSelectedIndex();
 
-        boolean isConfirmed = showConfirmationDialog(
-                "Removing file means remove all file backup versions on server\n"
-                        + "File: " + filesOnServer.get(indexOfSelectedFile),
-                "Continue?");
+        if (indexOfSelectedFile > -1) {
+            boolean isConfirmed = showConfirmationDialog(
+                    "Removing file means remove all file backup versions on server\n"
+                            + "File: " + filesOnServer.get(indexOfSelectedFile),
+                    "Continue?");
 
-        if(isConfirmed){
-            boolean fileRemoved = user.getServerHandler().removeSelectedFile(
-                    filesOnServer.get(indexOfSelectedFile)
-            );
+            if (isConfirmed) {
+                boolean fileRemoved = user.getServerHandler().removeSelectedFile(
+                        filesOnServer.get(indexOfSelectedFile)
+                );
 
-            if(fileRemoved){
-                //remove selected file from list and view
-                filesOnServer.remove(indexOfSelectedFile);
+                if (fileRemoved) {
+                    //remove selected file from list and view
+                    filesOnServer.remove(indexOfSelectedFile);
+                }
             }
         }
-
-        //when user clicked cancel, nothing happend
+        else {
+            showWarningDialog(
+                    "Error",
+                    "No file selected. Please first select the file and press button again."
+            ) ;
+        }
     }
     @FXML
     public void btn_restoreSelectedFileVersion_OnClick(ActionEvent event){
+        int indexOfSelectedVileVersion = lv_fileVersions.getSelectionModel().getSelectedIndex();
 
+        if (indexOfSelectedVileVersion > -1){
+            user.getServerHandler().restoreSelectedFileVersion(
+                    lb_fileName.getText(),
+                    fileVersions.get(indexOfSelectedVileVersion),
+                    this
+            );
+        }
     }
     @FXML
     public void btn_removeFileVersion_OnClick(ActionEvent event){
         int indexOfSelectedFileVersion = lv_fileVersions.getSelectionModel().getSelectedIndex();
 
-        boolean isConfirmed = showConfirmationDialog(
-                "Remove " + "\n"
-                        + "File: " + lb_fileName.getText() + "\n"
-                        + "Version: " + fileVersions.get(indexOfSelectedFileVersion) ,
-                "Continue?");
+        if (indexOfSelectedFileVersion > -1) {
+            boolean isConfirmed = showConfirmationDialog(
+                    "Remove " + "\n"
+                            + "File: " + lb_fileName.getText() + "\n"
+                            + "Version: " + fileVersions.get(indexOfSelectedFileVersion),
+                    "Continue?");
 
-        if (isConfirmed){
-            boolean fileVersionRemoved = user.getServerHandler().removeSelectedFileVersion(
-                    lb_fileName.getText(),
-                    fileVersions.get(indexOfSelectedFileVersion)
-            );
+            if (isConfirmed) {
+                boolean fileVersionRemoved = user.getServerHandler().removeSelectedFileVersion(
+                        lb_fileName.getText(),
+                        fileVersions.get(indexOfSelectedFileVersion)
+                );
 
-            if(fileVersionRemoved){
-                //remove selected file version from list and view
-                fileVersions.remove(indexOfSelectedFileVersion);
+                if (fileVersionRemoved) {
+                    //remove selected file version from list and view
+                    fileVersions.remove(indexOfSelectedFileVersion);
+                }
             }
+        }
+        else {
+            showWarningDialog(
+                    "Error",
+                    "No file selected. Please first select the file and press button again."
+            ) ;
         }
     }
 
 
+
+    @FXML
+    public void btn_minimize_OnClick(ActionEvent event){
+        Stage primaryStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        primaryStage.setIconified(true);
+    }
     @FXML
     public void btn_quit_OnClick(ActionEvent event){
         //logout user
@@ -206,23 +260,20 @@ public class AppController implements Initializable{
             Platform.exit();
         }
     }
-    @FXML
-    public void btn_minimize_OnClick(ActionEvent event){
-        Stage primaryStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        primaryStage.setIconified(true);
-    }
 
 
-    /*
-    Metoda pozwala wyłączyć autouzupełnianie formularza logującego.
-    (usuwa z pliku globalconfig dane użytkownika)
+
+
+    /**
+    * Metoda pozwala wyłączyć autouzupełnianie formularza logującego.
+    * (usuwa z pliku globalconfig dane użytkownika)
      */
     @FXML
     public void mi_autocomplete_OnClick(ActionEvent event){
         ConfigDataManager.createGlobalConfig(new GlobalConfig());
         showInformationDialog("Disable autocomplete login formula done", "Operation succeeded");
     }
-    /*
+    /**
     Metoda pozwala usunąć użytkownika z serwera.
     - usuwa pliki w pamięci lokalnej
     - usuwa pliki w pamięci zdalnej
@@ -255,7 +306,9 @@ public class AppController implements Initializable{
             }
         }
     }
-
+    /**
+     * Metoda wyświetlająca podstawowe dane na temat aplikacji.
+     */
     @FXML
     public void mi_about_OnClick(ActionEvent event){
         showInformationDialog(
@@ -266,14 +319,15 @@ public class AppController implements Initializable{
 
 
     //-----------------------Other Methodes
-    /*
-    Metoda, dzięki której jesteśmy w stanie przekazać obecnego użytkownika do aplikacji
+    /**
+     * Metoda, dzięki której jesteśmy w stanie przekazać obecnego użytkownika do aplikacji
      */
     public void setUser(User user){
         this.user = user;
     }
 
 
+    //-----------------------Dialog Methodes
     private void showInformationDialog(String title, String content){
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
@@ -300,5 +354,23 @@ public class AppController implements Initializable{
         } else {
             return false;
         }
+    }
+
+    //-----------------------Public Methodes
+    public void setStatisticLabelWithNumber(int currentNumber, int finalNumber){
+        lb_statistics_number.setText(currentNumber + "/" + finalNumber);
+    }
+    public void setStatisticLabelWithPercent(int percentValue){
+        lb_statistics_percent.setText(percentValue + "%");
+    }
+    public void setStatisticLabelWithPercentRestoring(int percentValue){
+        lb_statistics_percentRestoring.setText(percentValue + "%");
+    }
+
+    public void addFileOnServerList(File newFile){
+        filesOnServer.add(newFile);
+    }
+    public void addFileToArchiveList(File newFile){
+        filesToArchive.add(newFile);
     }
 }

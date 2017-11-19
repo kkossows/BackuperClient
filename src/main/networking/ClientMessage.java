@@ -12,5 +12,8 @@ public enum  ClientMessage {
     REMOVE_FILE_VERSION,
     DELETE_USER,
     LOG_OUT,
+    BACKUP_FILE,
+    BACKUP_FILE_FINISHED,
+    RESTORE_FILE,
     EXIT
 }

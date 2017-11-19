@@ -6,7 +6,6 @@
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
-<?import javafx.scene.control.ToolBar?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
@@ -85,19 +84,41 @@
                         <Font size="15.0" />
                      </font>
                   </Label>
-                  <Region prefHeight="75.0" prefWidth="145.0" />
                   <Button fx:id="btn_backupAll" mnemonicParsing="false" onAction="#btn_backupAll_OnClick" prefHeight="40.0" prefWidth="145.0" text="Buckup ALL" />
                   <Button fx:id="btn_backupOnlySelected" mnemonicParsing="false" onAction="#btn_backupOnlySelected_OnClick" prefHeight="33.0" prefWidth="147.0" text="Backup only selected one" textOverrun="WORD_ELLIPSIS" />
                </children>
             </VBox>
          </center>
          <bottom>
-            <ToolBar nodeOrientation="RIGHT_TO_LEFT" prefHeight="45.0" prefWidth="800.0" BorderPane.alignment="CENTER">
-              <items>
-                <Button fx:id="btn_quit" mnemonicParsing="false" onAction="#btn_quit_OnClick" prefHeight="24.0" prefWidth="112.0" text="Quit" />
+            <HBox alignment="CENTER_RIGHT" prefHeight="60.0" prefWidth="800.0" BorderPane.alignment="CENTER">
+               <children>
+                  <VBox>
+                     <children>
+                        <HBox alignment="CENTER_LEFT" prefHeight="48.0" prefWidth="340.0">
+                           <children>
+                              <Label text="Sending file:" />
+                              <Label fx:id="lb_statistics_number" prefHeight="16.0" prefWidth="37.0" text="..." />
+                              <Region prefHeight="30.0" prefWidth="101.0" />
+                              <Label text="File sending progress:" />
+                              <Label fx:id="lb_statistics_percent" text="..." />
+                           </children>
+                        </HBox>
+                        <HBox alignment="CENTER_LEFT" layoutX="10.0" layoutY="10.0" prefHeight="48.0" prefWidth="340.0">
+                           <children>
+                              <Region prefHeight="30.0" prefWidth="199.0" />
+                              <Label prefHeight="16.0" prefWidth="111.0" text="File restoring progress:" />
+                              <Label fx:id="lb_statistics_percentRestoring" text="..." />
+                           </children>
+                        </HBox>
+                     </children>
+                  </VBox>
+                  <Region prefHeight="55.0" prefWidth="129.0" />
                   <Button fx:id="btn_minimize" contentDisplay="CENTER" mnemonicParsing="false" onAction="#btn_minimize_OnClick" prefHeight="24.0" prefWidth="127.0" text="Minimize" />
-              </items>
-            </ToolBar>
+                  <Region prefHeight="48.0" prefWidth="28.0" />
+                <Button fx:id="btn_quit" mnemonicParsing="false" onAction="#btn_quit_OnClick" prefHeight="24.0" prefWidth="112.0" text="Quit" />
+                  <Region prefHeight="48.0" prefWidth="28.0" />
+               </children>
+            </HBox>
          </bottom>
       </BorderPane>
    </children>
