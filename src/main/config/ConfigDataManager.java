@@ -88,6 +88,10 @@ public class ConfigDataManager {
             e.printStackTrace();
         }
     }
+    public static void removeUserConfig(String username){
+        if(isUserConfigFileExists(username))
+            new File(Properties.appDataDir + username + ".dat").delete();
+    }
 
 
 }

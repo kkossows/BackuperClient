@@ -43,9 +43,6 @@ public class User {
         return userConfig.getUserFilesToArchive();
     }
 
-
-
-
     public String getUsername() {
         return username;
     }

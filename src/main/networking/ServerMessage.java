@@ -4,8 +4,8 @@ package main.networking;
  * Created by rkossowski on 18.11.2017.
  */
 public enum ServerMessage {
-    SEND_USERNAME,
-    SEND_PASSWORD,
+    GET_USERNAME,
+    GET_PASSWORD,
     USER_CREATED,
     USER_EXISTS,
     LOGIN_SUCCESS,
@@ -17,7 +17,7 @@ public enum ServerMessage {
     SENDING_FILE_VERSIIONS_FINISHED,
     FILE_REMOVED,
     GET_FILE_VERSION,
-    FILE_VERSION_REMOVED
-
-    ;
+    FILE_VERSION_REMOVED,
+    DELETE_USER_FINISHED,
+    LOG_OUT_FINISHED
 }

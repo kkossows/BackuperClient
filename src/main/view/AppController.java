@@ -1,5 +1,6 @@
 package main.view;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -10,9 +11,11 @@ import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import main.config.ConfigDataManager;
+import main.config.GlobalConfig;
 import main.config.UserConfig;
 import main.user.User;
 
+import javax.swing.*;
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
@@ -186,15 +189,22 @@ public class AppController implements Initializable{
 
     @FXML
     public void btn_quit_OnClick(ActionEvent event){
-        //update userConfigFile
-        UserConfig newUserConfig = new UserConfig();
-        newUserConfig.setUsername(user.getUsername());
-        newUserConfig.setUserFilesToArchive(filesToArchive);
-        ConfigDataManager.createUserConfig(newUserConfig);
+        //logout user
+        boolean isSucceeded = user.getServerHandler().logoutUser(lb_username.getText());
 
-        //close main stage
-        Stage primaryStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        primaryStage.close();
+        if (isSucceeded){
+            //close session connection
+            user.getServerHandler().closeConnection();
+
+            //update userConfigFile
+            UserConfig newUserConfig = new UserConfig();
+            newUserConfig.setUsername(user.getUsername());
+            newUserConfig.setUserFilesToArchive(filesToArchive);
+            ConfigDataManager.createUserConfig(newUserConfig);
+
+            //close application
+            Platform.exit();
+        }
     }
     @FXML
     public void btn_minimize_OnClick(ActionEvent event){
@@ -203,10 +213,57 @@ public class AppController implements Initializable{
     }
 
 
+    /*
+    Metoda pozwala wyłączyć autouzupełnianie formularza logującego.
+    (usuwa z pliku globalconfig dane użytkownika)
+     */
     @FXML
     public void mi_autocomplete_OnClick(ActionEvent event){
-
+        ConfigDataManager.createGlobalConfig(new GlobalConfig());
+        showInformationDialog("Disable autocomplete login formula done", "Operation succeeded");
     }
+    /*
+    Metoda pozwala usunąć użytkownika z serwera.
+    - usuwa pliki w pamięci lokalnej
+    - usuwa pliki w pamięci zdalnej
+     */
+    @FXML
+    public void mi_deleteProfile_OnClick(ActionEvent event){
+        boolean isConfirmed = showConfirmationDialog(
+                "Deleting user will remove all backup data on server.",
+                "Continue?"
+        );
+
+        if(isConfirmed){
+            boolean isSucceeded = user.getServerHandler().deleteUser(lb_username.getText());
+            if (isSucceeded){
+                //close session connection
+                user.getServerHandler().closeConnection();
+
+                //delete local files
+                ConfigDataManager.removeUserConfig(lb_username.getText());
+                if(user.isAutoCompleteOn()){
+                    ConfigDataManager.createGlobalConfig(new GlobalConfig());
+                }
+
+                showInformationDialog(
+                        "Your profile has been deleted.",
+                        "Application will be closed."
+                );
+                //close application
+                Platform.exit();
+            }
+        }
+    }
+
+    @FXML
+    public void mi_about_OnClick(ActionEvent event){
+        showInformationDialog(
+                "BACKUPER - backup your file to remote server",
+                "Version: 1.0\n More information in user manual."
+        );
+    }
+
 
     //-----------------------Other Methodes
     /*

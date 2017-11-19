@@ -10,6 +10,7 @@ public enum  ClientMessage {
     GET_ALL_FILE_VERSIONS,
     REMOVE_FILE,
     REMOVE_FILE_VERSION,
-
-    EXIT;
+    DELETE_USER,
+    LOG_OUT,
+    EXIT
 }

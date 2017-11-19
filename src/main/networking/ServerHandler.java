@@ -1,11 +1,8 @@
 package main.networking;
 
-import javax.swing.*;
 import java.io.*;
-import java.lang.reflect.Array;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Created by rkossowski on 18.11.2017.
@@ -54,9 +51,9 @@ public class ServerHandler {
     public boolean authenticateUser(String username, String password) {
         try {
             out.println(ClientMessage.LOG_IN.name());
-            if (in.readLine().equals(ServerMessage.SEND_USERNAME.name())) {
+            if (in.readLine().equals(ServerMessage.GET_USERNAME.name())) {
                 out.println(username);
-                if (in.readLine().equals(ServerMessage.SEND_PASSWORD.name())) {
+                if (in.readLine().equals(ServerMessage.GET_PASSWORD.name())) {
                     out.println(password);
                     if (in.readLine().equals(ServerMessage.LOGIN_SUCCESS.name())) {
                         return true;
@@ -82,9 +79,9 @@ public class ServerHandler {
     public boolean registerUser(String username, String password) {
         try {
             out.println(ClientMessage.REGISTER.name());
-            if (in.readLine().equals(ServerMessage.SEND_USERNAME.name())) {
+            if (in.readLine().equals(ServerMessage.GET_USERNAME.name())) {
                 out.println(username);
-                if (in.readLine().equals(ServerMessage.SEND_PASSWORD.name())) {
+                if (in.readLine().equals(ServerMessage.GET_PASSWORD.name())) {
                     out.println(password);
                     if (in.readLine().equals(ServerMessage.USER_CREATED.name())) {
                         return true;
@@ -208,5 +205,56 @@ public class ServerHandler {
         return false;
     }
 
+    /*
+    Metoda odpowiedzialna za usunięcie profilu użytkownika po stronie serwera.
+    (usuwa możliwość logowania oraz wszelkie zapisane pliki z nim związane)
+     */
+    public boolean deleteUser(String username) {
+        try {
+            out.println(ClientMessage.DELETE_USER.name());
+            if (in.readLine().equals(ServerMessage.GET_USERNAME.name())) {
+                out.println(username);
+                if (in.readLine().equals(ServerMessage.DELETE_USER_FINISHED.name())) {
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
 
+        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
+        return false;
+    }
+
+    /*
+    Metoda odpowiedzialna za wylogowanie użytkownika - informuje
+     */
+    public boolean logoutUser(String username) {
+        try {
+            out.println(ClientMessage.LOG_OUT.name());
+            if (in.readLine().equals(ServerMessage.LOG_OUT_FINISHED.name())) {
+                return true;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return false;
+    }
+
+
+    /*
+    Metoda zamykajaca połaczenie - przed zamknięciem wysyłamy wiadomosć EXIT
+     */
+    public void closeConnection() {
+        out.println(ClientMessage.EXIT.name());
+        try {
+            out.close();
+            in.close();
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

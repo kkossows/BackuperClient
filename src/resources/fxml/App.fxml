@@ -23,12 +23,12 @@
                 <Menu mnemonicParsing="false" text="Settings">
                   <items>
                     <MenuItem fx:id="mi_autocomplete" mnemonicParsing="false" onAction="#mi_autocomplete_OnClick" text="Disable autocomplete" />
-                        <MenuItem mnemonicParsing="false" text="Remove profile" />
+                        <MenuItem fx:id="mi_deleteProfile" mnemonicParsing="false" onAction="#mi_deleteProfile_OnClick" text="Delete profile" />
                   </items>
                 </Menu>
                 <Menu mnemonicParsing="false" text="Help">
                   <items>
-                    <MenuItem mnemonicParsing="false" text="About" />
+                    <MenuItem fx:id="mi_about" mnemonicParsing="false" onAction="#mi_about_OnClick" text="About" />
                   </items>
                 </Menu>
               </menus>
