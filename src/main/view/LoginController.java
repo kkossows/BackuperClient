@@ -65,6 +65,7 @@ public class LoginController implements Initializable{
             tx_serverPort.setText(Integer.toString(globalConfig.getSavedServerPortNumber()));
             tx_username.setText(globalConfig.getSavedUsername());
             tx_password.setText(globalConfig.getSavedPassword());
+            cbox_remember.setSelected(true);
         } else {
             tx_serverIp.setText(globalConfig.getDefaultServerIpAddress());
             tx_serverPort.setText(Integer.toString(globalConfig.getDefaultServerPortNumber()));
@@ -92,6 +93,11 @@ public class LoginController implements Initializable{
                     tx_username.getText().trim(), tx_username.getText().trim());
 
             if(authenticationSuccess){
+                //stwórz bierzącego użytkownika
+                User currentUser = new User(tx_username.getText(), serverHandler);
+                AppController appController = new AppController();
+                appController.setUser(currentUser);
+
                 //aktualizacja plików konfiguracyjnych
                 if (cbox_remember.isSelected()){
                     GlobalConfig newGlobalConfig = new GlobalConfig();
@@ -105,12 +111,20 @@ public class LoginController implements Initializable{
                     newGlobalConfig.setSavedPassword(tx_password.getText());
 
                     ConfigDataManager.createGlobalConfig(newGlobalConfig);
+
+                    //zaktualizuj flage u uzytkownika
+                    currentUser.setAutoCompleteOn(true);
                 }
 
-                //stwórz bierzącego użytkownika
-                User currentUser = new User(tx_username.getText(), serverHandler);
-                AppController appController = new AppController();
-                appController.setUser(currentUser);
+                //sprawdz, czy użytkownik nie jest zapisany w pliku globalnym
+                //jezeli jest, ustaw flagę na true
+                GlobalConfig globalConfig = ConfigDataManager.readGlobalConfig();
+                if (globalConfig.getSavedServerIpAddress().equals(tx_serverIp.getText())
+                        && globalConfig.getSavedServerPortNumber() == Integer.getInteger(tx_serverPort.getText())
+                        && globalConfig.getSavedUsername().equals(tx_username.getText())
+                        && globalConfig.getSavedPassword().equals(tx_password.getText())){
+                    currentUser.setAutoCompleteOn(true);
+                }
 
                 //przełącz sceny z logowania na główną scene aplikacji
                 //(zrobione inaczej aby dodać już utworzony kontroler)

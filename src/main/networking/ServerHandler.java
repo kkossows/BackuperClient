@@ -129,4 +129,84 @@ public class ServerHandler {
         //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
         return backupFiles;
     }
+
+
+    /*
+    Metoda odpowiedzialna za pobranie wszystkich wersji danego pliku.
+    Jako wersję pliku traktować będziemy datę modyfikacji zapisaną w Stringu.
+     */
+    public ArrayList<String> getAllFileVersionsFromServer(File file){
+        ArrayList<String> versionsList= new ArrayList<>();
+
+        try {
+            out.println(ClientMessage.GET_ALL_FILE_VERSIONS.name());
+            if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
+                out.println(file.getAbsolutePath());
+                if (in.readLine().equals(ServerMessage.SENDING_FILE_VERSIONS.name())) {
+                    String nextMessageLine = in.readLine();
+                    while (nextMessageLine.equals(ServerMessage.SENDING_FILE_VERSIIONS_FINISHED.name())) {
+                        versionsList.add(nextMessageLine);
+                        nextMessageLine = in.readLine();
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return versionsList;
+        }
+
+        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
+        return versionsList;
+    }
+
+
+    /*
+    Metoda odpowiedzialna za zdalne usunięcie wszystkich wersji pliku znajdujących się na serwerze.
+    Zwraca status operacji - true, jeżeli operacja powiodła się.
+    */
+    public boolean removeSelectedFile(File file){
+        try {
+            out.println(ClientMessage.REMOVE_FILE.name());
+            if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
+                out.println(file.getAbsolutePath());
+                if (in.readLine().equals(ServerMessage.FILE_REMOVED.name())) {
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
+        return false;
+    }
+
+
+    /*
+    Metoda odpowiedzialna za usunięcie konkretnej wersji pliku znajdującego się na serwerze.
+    Wersja oznaczona jest jako string zawierający datę modyfikacji.
+     */
+    public boolean removeSelectedFileVersion(String filePath, String fileVersion){
+        try {
+            out.println(ClientMessage.REMOVE_FILE_VERSION.name());
+            if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
+                out.println(filePath);
+                if (in.readLine().equals(ServerMessage.GET_FILE_VERSION.name())) {
+                    out.println(fileVersion);
+                    if(in.readLine().equals(ServerMessage.FILE_VERSION_REMOVED.name())){
+                        return true;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
+        return false;
+    }
+
+
 }

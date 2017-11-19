@@ -16,11 +16,15 @@ public class User {
     private ServerHandler serverHandler;
     List<File> userFilesToArchive;
 
+    //variable needs to verify, if user variables are saved in globalconfig file to autocomplete
+    boolean autoCompleteOn;
+
 
     public User(String username, ServerHandler serverHandler){
         this.username = username;
         this.serverHandler = serverHandler;
         this.userFilesToArchive = loadUserFilesToArchiveFromConfigFile();
+        this.autoCompleteOn = false;
     }
 
     //Methode load file list from config file
@@ -45,25 +49,20 @@ public class User {
     public String getUsername() {
         return username;
     }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
     public ServerHandler getServerHandler() {
         return serverHandler;
     }
-
-    public void setServerHandler(ServerHandler serverHandler) {
-        this.serverHandler = serverHandler;
-    }
-
     public List<File> getUserFilesToArchive() {
         return userFilesToArchive;
+    }
+    public boolean isAutoCompleteOn() {
+        return autoCompleteOn;
     }
 
     public void setUserFilesToArchive(List<File> userFilesToArchive) {
         this.userFilesToArchive = userFilesToArchive;
     }
-
+    public void setAutoCompleteOn(boolean autoCompleteOn) {
+        this.autoCompleteOn = autoCompleteOn;
+    }
 }

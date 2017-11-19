@@ -22,7 +22,7 @@
               <menus>
                 <Menu mnemonicParsing="false" text="Settings">
                   <items>
-                    <MenuItem mnemonicParsing="false" text="Disable autocomplete" />
+                    <MenuItem fx:id="mi_autocomplete" mnemonicParsing="false" onAction="#mi_autocomplete_OnClick" text="Disable autocomplete" />
                         <MenuItem mnemonicParsing="false" text="Remove profile" />
                   </items>
                 </Menu>
@@ -42,7 +42,6 @@
                   <Button fx:id="btn_addFile" mnemonicParsing="false" onAction="#btn_addFile_OnClick" prefHeight="24.0" prefWidth="262.0" text="Add file" />
                   <Button fx:id="btn_removeFile" mnemonicParsing="false" onAction="#btn_removeFile_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove File" />
                   <Button fx:id="btn_removeAllFiles" mnemonicParsing="false" onAction="#btn_removeAllFiles_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove All Files" />
-                  <Button fx:id="btn_backupOnlySelected" mnemonicParsing="false" onAction="#btn_backupOnlySelected_OnClick" prefHeight="33.0" prefWidth="271.0" text="Backup only selected one" textOverrun="WORD_ELLIPSIS" />
                </children>
             </VBox>
          </left>
@@ -51,6 +50,7 @@
                <children>
                   <VBox alignment="CENTER" prefHeight="336.0" prefWidth="210.0">
                      <children>
+                        <Region prefHeight="17.0" prefWidth="210.0" />
                         <Label text="Files on server:" />
                         <ListView fx:id="lv_filesOnServer" prefHeight="200.0" prefWidth="184.0" />
                         <Button fx:id="btn_showVersionFile" mnemonicParsing="false" onAction="#btn_showVersionFile_OnClick" prefWidth="214.0" text="Show file versions" />
@@ -59,6 +59,13 @@
                   </VBox>
                   <VBox alignment="CENTER" layoutX="10.0" layoutY="10.0" prefHeight="336.0" prefWidth="212.0">
                      <children>
+                        <HBox prefHeight="15.0" prefWidth="212.0">
+                           <children>
+                              <Label prefHeight="6.0" prefWidth="50.0" text="FIle name:" />
+                              <Region prefHeight="26.0" prefWidth="8.0" />
+                              <Label fx:id="lb_fileName" prefHeight="7.0" prefWidth="103.0" text="..." />
+                           </children>
+                        </HBox>
                         <Label text="File versions:" />
                         <ListView fx:id="lv_fileVersions" prefHeight="200.0" prefWidth="142.0" />
                         <Button fx:id="btn_restoreSelectedFileVersion" mnemonicParsing="false" onAction="#btn_restoreSelectedFileVersion_OnClick" prefWidth="214.0" text="Restore selected file version" />
@@ -79,7 +86,8 @@
                      </font>
                   </Label>
                   <Region prefHeight="75.0" prefWidth="145.0" />
-                  <Button fx:id="btn_backupAll" mnemonicParsing="false" onAction="#btn_backupAll_OnClick" text="Buckup ALL" />
+                  <Button fx:id="btn_backupAll" mnemonicParsing="false" onAction="#btn_backupAll_OnClick" prefHeight="40.0" prefWidth="145.0" text="Buckup ALL" />
+                  <Button fx:id="btn_backupOnlySelected" mnemonicParsing="false" onAction="#btn_backupOnlySelected_OnClick" prefHeight="33.0" prefWidth="147.0" text="Backup only selected one" textOverrun="WORD_ELLIPSIS" />
                </children>
             </VBox>
          </center>
