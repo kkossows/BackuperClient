@@ -410,6 +410,7 @@ public class AppController implements Initializable{
                 "Continue?"
         );
 
+        //deleting also logout on server side
         if(isConfirmed){
             boolean isSucceeded = user.getServerHandler().deleteUser(lb_username.getText());
             if (isSucceeded){

@@ -1,6 +1,5 @@
 package main.networking;
 
-import javafx.collections.ObservableList;
 import main.view.AppController;
 
 import java.io.*;
@@ -145,7 +144,7 @@ public class ServerHandler {
                 out.println(file.getAbsolutePath());
                 if (in.readLine().equals(ServerMessage.SENDING_FILE_VERSIONS.name())) {
                     String nextMessageLine = in.readLine();
-                    while (nextMessageLine.equals(ServerMessage.SENDING_FILE_VERSIIONS_FINISHED.name())) {
+                    while (nextMessageLine.equals(ServerMessage.SENDING_FILE_VERSIONS_FINISHED.name())) {
                         versionsList.add(nextMessageLine);
                         nextMessageLine = in.readLine();
                     }
@@ -214,13 +213,11 @@ public class ServerHandler {
     (usuwa możliwość logowania oraz wszelkie zapisane pliki z nim związane)
      */
     public boolean deleteUser(String username) {
+        //rest of functionality handled byAppController
         try {
             out.println(ClientMessage.DELETE_USER.name());
-            if (in.readLine().equals(ServerMessage.GET_USERNAME.name())) {
-                out.println(username);
-                if (in.readLine().equals(ServerMessage.DELETE_USER_FINISHED.name())) {
-                    return true;
-                }
+            if (in.readLine().equals(ServerMessage.DELETE_USER_FINISHED.name())) {
+                return true;
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -249,10 +246,9 @@ public class ServerHandler {
 
 
     /*
-    Metoda zamykajaca połaczenie - przed zamknięciem wysyłamy wiadomosć EXIT
+    Metoda zamykajaca połaczenie
      */
     public void closeConnection() {
-        out.println(ClientMessage.EXIT.name());
         try {
             out.close();
             in.close();

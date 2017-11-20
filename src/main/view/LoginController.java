@@ -91,7 +91,9 @@ public class LoginController implements Initializable{
             ServerHandler serverHandler = new ServerHandler();
             boolean authenticationSuccess;
             authenticationSuccess = serverHandler.authenticateUser(
-                    tx_username.getText().trim(), tx_username.getText().trim());
+                    tx_username.getText().trim(),
+                    tx_password.getText().trim()
+            );
 
             if(authenticationSuccess){
                 //stwórz bierzącego użytkownika
