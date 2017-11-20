@@ -39,8 +39,8 @@
                   <Label text="Files to archive" />
                   <ListView fx:id="lv_filesToArchive" prefHeight="200.0" prefWidth="219.0" />
                   <Button fx:id="btn_addFile" mnemonicParsing="false" onAction="#btn_addFile_OnClick" prefHeight="24.0" prefWidth="262.0" text="Add file" />
-                  <Button fx:id="btn_removeFile" mnemonicParsing="false" onAction="#btn_removeFile_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove File" />
-                  <Button fx:id="btn_removeAllFiles" mnemonicParsing="false" onAction="#btn_removeAllFiles_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove All Files" />
+                  <Button fx:id="btn_removeFile" mnemonicParsing="false" onAction="#btn_removeSelectedFile_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove selected file" />
+                  <Button fx:id="btn_removeAllFiles" mnemonicParsing="false" onAction="#btn_removeAllFiles_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove all files" />
                </children>
             </VBox>
          </left>
@@ -53,7 +53,7 @@
                         <Label text="Files on server:" />
                         <ListView fx:id="lv_filesOnServer" prefHeight="200.0" prefWidth="184.0" />
                         <Button fx:id="btn_showVersionFile" mnemonicParsing="false" onAction="#btn_showVersionFile_OnClick" prefWidth="214.0" text="Show file versions" />
-                        <Button fx:id="btn_removeFileFromServer" mnemonicParsing="false" onAction="#btn_removeFileFromServer_OnClick" prefWidth="214.0" text="Remove file" />
+                        <Button fx:id="btn_removeFileFromServer" mnemonicParsing="false" onAction="#btn_removeSelectedFileFromServer_OnClick" prefWidth="214.0" text="Remove selected file" />
                      </children>
                   </VBox>
                   <VBox alignment="CENTER" layoutX="10.0" layoutY="10.0" prefHeight="336.0" prefWidth="212.0">
@@ -68,7 +68,7 @@
                         <Label text="File versions:" />
                         <ListView fx:id="lv_fileVersions" prefHeight="200.0" prefWidth="142.0" />
                         <Button fx:id="btn_restoreSelectedFileVersion" mnemonicParsing="false" onAction="#btn_restoreSelectedFileVersion_OnClick" prefWidth="214.0" text="Restore selected file version" />
-                        <Button fx:id="btn_removeFileVersion" mnemonicParsing="false" onAction="#btn_removeFileVersion_OnClick" prefWidth="214.0" text="Remove file version" />
+                        <Button fx:id="btn_removeFileVersion" mnemonicParsing="false" onAction="#btn_removeFileVersion_OnClick" prefWidth="214.0" text="Remove selected file version" />
                      </children>
                   </VBox>
                </children>
@@ -84,7 +84,8 @@
                         <Font size="15.0" />
                      </font>
                   </Label>
-                  <Button fx:id="btn_backupAll" mnemonicParsing="false" onAction="#btn_backupAll_OnClick" prefHeight="40.0" prefWidth="145.0" text="Buckup ALL" />
+                  <Region prefHeight="30.0" prefWidth="199.0" />
+                  <Button fx:id="btn_backupAll" mnemonicParsing="false" onAction="#btn_backupAll_OnClick" prefHeight="40.0" prefWidth="145.0" text="Buckup all files" />
                   <Button fx:id="btn_backupOnlySelected" mnemonicParsing="false" onAction="#btn_backupOnlySelected_OnClick" prefHeight="33.0" prefWidth="147.0" text="Backup only selected one" textOverrun="WORD_ELLIPSIS" />
                </children>
             </VBox>

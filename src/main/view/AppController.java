@@ -17,7 +17,9 @@ import main.user.User;
 
 import javax.swing.*;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.ResourceBundle;
@@ -104,7 +106,7 @@ public class AppController implements Initializable{
         //only with closing the app, userConfigFile is updated
     }
     @FXML
-    public void btn_removeFile_OnClick(ActionEvent event) {
+    public void btn_removeSelectedFile_OnClick(ActionEvent event) {
         int index = lv_filesToArchive.getSelectionModel().getSelectedIndex();
         if (index > -1) {
             filesToArchive.remove(index);
@@ -124,10 +126,19 @@ public class AppController implements Initializable{
 
     @FXML
     public void btn_backupAll_OnClick(ActionEvent event){
-        user.getServerHandler().backupAllFiles(
-                filesToArchive,
-                this
-        );
+        if (filesToArchive.size() == 0){
+            showWarningDialog(
+                    "No files to archive.",
+                    "Please, add file(s) and click the button again."
+            );
+        }
+        else {
+            user.getServerHandler().backupAllFiles(
+                    filesToArchive,
+                    this
+            );
+        }
+
     }
     @FXML
     public void btn_backupOnlySelected_OnClick(ActionEvent event) {
@@ -150,20 +161,31 @@ public class AppController implements Initializable{
 
     @FXML
     public void btn_showVersionFile_OnClick(ActionEvent event){
-        //get selected file index and find it in arraylist to get require file
-        File selectedFile = filesOnServer.get(lv_filesOnServer.getSelectionModel().getSelectedIndex());
+        //verify whether user select any file
+        int indexOfSelectedFile =  lv_filesOnServer.getSelectionModel().getSelectedIndex();
 
-        //get list from server
-        ArrayList<String> receivedList = user.getServerHandler().getAllFileVersionsFromServer(selectedFile);
+        if(indexOfSelectedFile > -1) {
+            //get selected file indexOfSelectedFile and find it in arraylist to get require file
+            File selectedFile = filesOnServer.get(indexOfSelectedFile);
 
-        //add hole list to observable list
-        fileVersions.addAll(receivedList);
+            //get list from server
+            ArrayList<String> receivedList = user.getServerHandler().getAllFileVersionsFromServer(selectedFile);
 
-        //set file name label
-        lb_fileName.setText(selectedFile.getAbsolutePath());
+            //add hole list to observable list
+            fileVersions.addAll(receivedList);
+
+            //set file name label
+            lb_fileName.setText(selectedFile.getAbsolutePath());
+        }
+        else {
+            showWarningDialog(
+                    "Error",
+                    "No file selected. Please first select the file and press button again."
+            ) ;
+        }
     }
     @FXML
-    public void btn_removeFileFromServer_OnClick(ActionEvent event){
+    public void btn_removeSelectedFileFromServer_OnClick(ActionEvent event){
         //method remove all versions of selected file
         int indexOfSelectedFile = lv_filesOnServer.getSelectionModel().getSelectedIndex();
 
@@ -178,8 +200,14 @@ public class AppController implements Initializable{
                         filesOnServer.get(indexOfSelectedFile)
                 );
 
+                //remove all version from view if file was proceeded before
+                if (lb_fileName.getText().equals(filesOnServer.get(indexOfSelectedFile).getAbsolutePath())){
+                    fileVersions.clear();
+                    lb_fileName.setText("");
+                }
+
+                //remove selected file from list and view
                 if (fileRemoved) {
-                    //remove selected file from list and view
                     filesOnServer.remove(indexOfSelectedFile);
                 }
             }
@@ -196,11 +224,90 @@ public class AppController implements Initializable{
         int indexOfSelectedVileVersion = lv_fileVersions.getSelectionModel().getSelectedIndex();
 
         if (indexOfSelectedVileVersion > -1){
+            //check if file is already on local file system
+            //if it is, ask if user want to override it or create new file with
+            String backupFilePath = lb_fileName.getText();
+            String backupFileVersion = fileVersions.get(indexOfSelectedVileVersion);
+            File backupFile = new File(backupFilePath);
+
+            if (backupFile.exists()) {
+                //file exist on local system file
+
+                //verify version of file on local file system
+                SimpleDateFormat sdf = new SimpleDateFormat("MM-dd-yyyy_HH-mm-ss");
+                String localFileVersion = sdf.format(backupFile.lastModified());
+
+                if (backupFileVersion.equals(localFileVersion)) {
+                    //same versions - show information and return from method
+                    showInformationDialog(
+                            "Same file versions",
+                            "Selected version file already exists on local system file."
+                    );
+                    return;
+
+                } else {
+                    //different versions
+
+                    //ask user
+                    int questionAnswer = showYesNoDialog(
+                            "Different file version on local file system.",
+                            "Do you want to override file?\nYES-override\nNO-create new file with version in name"
+                    );
+
+                    switch (questionAnswer) {
+                        case 1:
+                            //user want to override existing file
+                            backupFile.delete();
+                        case 0:
+                            //user want to create new file with version in name
+                            //new file name example: oldName_version.txt -> test_11-19-2017_20-45-13.txt
+                            String newBackupFileName;
+                            String[] fileNameSplitter = (backupFile.getName()).split("\\.");
+                            newBackupFileName = fileNameSplitter[0] + "_" + backupFileVersion + "." + fileNameSplitter[1];
+
+                            String newBackupFilePath;
+                            newBackupFilePath = backupFile.getParent() + "/" + newBackupFileName;
+
+                            backupFile = new File (newBackupFilePath);
+                            break;
+                        case -1:
+                            //user canceled operation - end method
+                            return;
+                    }
+
+                    //create empty file
+                    try {
+                        backupFile.createNewFile();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            else {
+                //file not exist on local file system
+
+                //create sub-folders and empty file
+                try {
+                    backupFile.getParentFile().mkdirs();
+                    backupFile.createNewFile();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            //run serverHandler method
             user.getServerHandler().restoreSelectedFileVersion(
-                    lb_fileName.getText(),
-                    fileVersions.get(indexOfSelectedVileVersion),
+                    backupFilePath,
+                    backupFileVersion,
+                    backupFile,
                     this
             );
+        }
+        else {
+            showWarningDialog(
+                    "Error",
+                    "No file selected. Please first select the file and press button again."
+            ) ;
         }
     }
     @FXML
@@ -220,8 +327,26 @@ public class AppController implements Initializable{
                         fileVersions.get(indexOfSelectedFileVersion)
                 );
 
+                //if it was the last version, remove also file from filesOnServerList
+                if (fileVersions.size() == 1){
+                    int indexOfFileWithNoVersion = -1;
+                    //find file
+                    for (int i = 0; i < filesOnServer.size(); i++){
+                        if(filesOnServer.get(i).getAbsolutePath().equals(lb_fileName.getText())){
+                            indexOfFileWithNoVersion = i;
+                            break;
+                        }
+                    }
+                    //remove file from list
+                    if (indexOfFileWithNoVersion != -1){
+                        filesOnServer.remove(indexOfFileWithNoVersion);
+                    }
+                    //remove file name label
+                    lb_fileName.setText("");
+                }
+
+                //remove selected file version from list and view
                 if (fileVersionRemoved) {
-                    //remove selected file version from list and view
                     fileVersions.remove(indexOfSelectedFileVersion);
                 }
             }
@@ -328,7 +453,7 @@ public class AppController implements Initializable{
 
 
     //-----------------------Dialog Methodes
-    private void showInformationDialog(String title, String content){
+    public void showInformationDialog(String title, String content){
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setContentText(content);
@@ -355,6 +480,28 @@ public class AppController implements Initializable{
             return false;
         }
     }
+    private int showYesNoDialog(String headerText, String contentText) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("YES/NO Dialog");
+        alert.setHeaderText(headerText);
+        alert.setContentText(contentText);
+
+        ButtonType buttonYES = new ButtonType("YES");
+        ButtonType buttonNO = new ButtonType("NO");
+        ButtonType buttonCANCEL = new ButtonType("CANCEL");
+        alert.getButtonTypes().setAll(buttonYES, buttonNO);
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.get() == buttonYES){
+            return 1;
+        } else if (result.get() == buttonNO) {
+            return 0;
+        } else if (result.get() == buttonCANCEL) {
+            return -1;
+        } else {
+            return -2;
+        }
+    }
 
     //-----------------------Public Methodes
     public void setStatisticLabelWithNumber(int currentNumber, int finalNumber){
@@ -369,8 +516,5 @@ public class AppController implements Initializable{
 
     public void addFileOnServerList(File newFile){
         filesOnServer.add(newFile);
-    }
-    public void addFileToArchiveList(File newFile){
-        filesToArchive.add(newFile);
     }
 }

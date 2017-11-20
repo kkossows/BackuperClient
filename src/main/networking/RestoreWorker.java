@@ -13,6 +13,7 @@ public class RestoreWorker implements Runnable {
     private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
+    private File emptyFileOnLocalSystem;
     private String filePath;
     private String fileVersion;
     private AppController appController;
@@ -20,11 +21,13 @@ public class RestoreWorker implements Runnable {
 
     public RestoreWorker(
             Socket socket, BufferedReader inputStream, PrintWriter outputStream,
-            String filePath, String fileVersion, AppController appController) {
+            File emptyFileOnLocalSystem, String filePath, String fileVersion,
+            AppController appController) {
 
         this.socket = socket;
         this.in = inputStream;
         this.out = outputStream;
+        this.emptyFileOnLocalSystem = emptyFileOnLocalSystem;
         this.filePath = filePath;
         this.fileVersion = fileVersion;
         this.appController = appController;
@@ -54,22 +57,10 @@ public class RestoreWorker implements Runnable {
             e.printStackTrace();
         }
 
-        //create file in local file system (and sub-directories if necessary)
-        File backupFile = new File(filePath);
-        backupFile.getParentFile().mkdirs();
-        try {
-            backupFile.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
         if (isSendingFile) {
-            boolean isFileReceivedCorrectly = false;
-
             try {
                 DataInputStream inputStream = new DataInputStream(socket.getInputStream());
-                FileOutputStream outputStream = new FileOutputStream(backupFile);
+                FileOutputStream outputStream = new FileOutputStream(emptyFileOnLocalSystem);
 
                 byte[] buffer = new byte[main.config.Properties.bufferSize];
                 int numberOfReadBytes = 0;
@@ -88,14 +79,13 @@ public class RestoreWorker implements Runnable {
 
                 //verify whether server finished
                 if (in.readLine().equals(ServerMessage.SENDING_FILE_FINISHED.name())) {
-                    isFileReceivedCorrectly = true;
+                    //restored file not show in files to archive list
+                    //user only see informationDialog that restoring finised
+                    appController.showInformationDialog(
+                            "Restoring file finished.",
+                            "File saved in " + emptyFileOnLocalSystem.getAbsolutePath()
+                    );
                 }
-
-                if (isFileReceivedCorrectly){
-                    //update lists
-                    appController.addFileToArchiveList(backupFile);
-                }
-
             } catch (IOException e) {
                 e.printStackTrace();
             }

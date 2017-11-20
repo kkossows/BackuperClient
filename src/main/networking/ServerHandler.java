@@ -272,7 +272,7 @@ public class ServerHandler {
         ArrayList<File> filesToArchive = new ArrayList<>();
         filesToArchive.add(fileToArchive);
 
-        backupAllFiles(filesToArchive, appController);
+        this.backupAllFiles(filesToArchive, appController);
     }
 
     /**
@@ -295,10 +295,12 @@ public class ServerHandler {
      * @param filePath
      * @param fileVersion
      */
-    public void restoreSelectedFileVersion(String filePath, String fileVersion, AppController appController){
+    public void restoreSelectedFileVersion(
+            String filePath, String fileVersion, File backupFile, AppController appController){
+
         RestoreWorker restoreWorker = new RestoreWorker(
                 socket, in, out,
-                filePath, fileVersion,
+                backupFile, filePath, fileVersion,
                 appController );
         Thread restoreThread = new Thread(restoreWorker);
         restoreThread.start();

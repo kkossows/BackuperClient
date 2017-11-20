@@ -107,7 +107,7 @@ public class BackupWorker implements Runnable {
      * @return
      */
     private String getVersionOfFile(File file){
-        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+        SimpleDateFormat sdf = new SimpleDateFormat("MM-dd-yyyy_HH-mm-ss");
         return sdf.format(file.lastModified());
     }
 
