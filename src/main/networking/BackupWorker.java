@@ -12,7 +12,7 @@ import static oracle.jrockit.jfr.events.Bits.intValue;
 
 /**
  * Class to handle backup files stuff.
- * Created by rkossowski on 19.11.2017.
+ * Created by kkossowski on 19.11.2017.
  */
 public class BackupWorker implements Runnable {
     private Socket socket;
@@ -60,6 +60,14 @@ public class BackupWorker implements Runnable {
                             if (in.readLine().equals(ServerMessage.GET_FILE_CONTENT.name())) {
                                 sendFile = true;
                             }
+                            else if (in.readLine().equals(ServerMessage.FILE_VERSION_EXISTS.name())){
+                                sendFile = false;
+
+                                appController.showInformationDialog(
+                                        "Backup file" + file.getName(),
+                                        "File version already exists on server. Data not transmitted."
+                                );
+                            }
                         }
                     }
                 }
@@ -69,10 +77,9 @@ public class BackupWorker implements Runnable {
 
 
             //send file
-            if (sendFile) {
-                try {
-                    DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
-                    FileInputStream inputStream = new FileInputStream(file);
+            try {
+                try (DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+                     FileInputStream inputStream = new FileInputStream(file)) {
 
                     byte[] buffer = new byte[main.config.Properties.bufferSize];
                     int numberOfReadBytes = 0;
@@ -81,23 +88,24 @@ public class BackupWorker implements Runnable {
 
                     //-1 if there is no more data because the end of the file has been reached
                     while (bytesToSend > 0
-                            && (numberOfReadBytes = inputStream.read(buffer, 0, (int) Math.min(buffer.length, bytesToSend))) != -1){
+                            && (numberOfReadBytes = inputStream.read(buffer, 0, (int) Math.min(buffer.length, bytesToSend))) != -1) {
 
                         outputStream.write(buffer);
                         bytesToSend -= numberOfReadBytes;
                         bytesSent += numberOfReadBytes;
-                        appController.setStatisticLabelWithPercent((int)(bytesSent/fileSize));
+                        appController.setStatisticLabelWithPercent((int) (bytesSent / fileSize));
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                }//close streams
+            } catch (IOException e) {
+                e.printStackTrace();
             }
+            if (sendFile) {
+                //update server list
+                appController.addFileOnServerList(file);
 
-            //update server list
-            appController.addFileOnServerList(file);
-
-            //inform server side, that the transmisiion is finished
-            out.println(ClientMessage.BACKUP_FILE_FINISHED.name());
+                //inform server side, that the transmission is finished
+                out.println(ClientMessage.BACKUP_FILE_FINISHED.name());
+            }
         }
     }
 

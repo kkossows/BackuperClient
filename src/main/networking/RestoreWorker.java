@@ -59,24 +59,23 @@ public class RestoreWorker implements Runnable {
 
         if (isSendingFile) {
             try {
-                DataInputStream inputStream = new DataInputStream(socket.getInputStream());
-                FileOutputStream outputStream = new FileOutputStream(emptyFileOnLocalSystem);
+                try(DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+                    FileOutputStream outputStream = new FileOutputStream(emptyFileOnLocalSystem)) {
+                    byte[] buffer = new byte[main.config.Properties.bufferSize];
+                    int numberOfReadBytes = 0;
+                    long bytesToRead = fileSize;
+                    long bytesRead = 0;
 
-                byte[] buffer = new byte[main.config.Properties.bufferSize];
-                int numberOfReadBytes = 0;
-                long bytesToRead = fileSize;
-                long bytesRead = 0;
+                    while (bytesToRead > 0) {
+                        if ((numberOfReadBytes = inputStream.read(buffer, 0, (int) Math.min(bytesToRead, buffer.length))) > 0) {
 
-                while (bytesToRead > 0) {
-                    if ((numberOfReadBytes = inputStream.read(buffer, 0, (int) Math.min(bytesToRead, buffer.length))) > 0) {
-
-                        outputStream.write(buffer);
-                        bytesToRead -= numberOfReadBytes;
-                        bytesRead += numberOfReadBytes;
-                        appController.setStatisticLabelWithPercentRestoring((int) (bytesRead / fileSize));
+                            outputStream.write(buffer);
+                            bytesToRead -= numberOfReadBytes;
+                            bytesRead += numberOfReadBytes;
+                            appController.setStatisticLabelWithPercentRestoring((int) (bytesRead / fileSize));
+                        }
                     }
-                }
-
+                }//close streams
                 //verify whether server finished
                 if (in.readLine().equals(ServerMessage.SENDING_FILE_FINISHED.name())) {
                     //restored file not show in files to archive list
