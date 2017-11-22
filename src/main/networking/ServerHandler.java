@@ -1,14 +1,10 @@
 package main.networking;
 
-import main.view.AppController;
-
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
-
 /**
- * Created by rkossowski on 18.11.2017.
+ * Created by kkossowski on 18.11.2017.
  */
 public class ServerHandler {
     private static Socket socket;
@@ -16,9 +12,9 @@ public class ServerHandler {
     private PrintWriter out;
 
 
-    /*
-    Konstruktor klasy.
-    Tworzy strumienie wejściowe i wyjściowe strumienia.
+    /**
+     * Constructor
+     * - create proper form of input and output streams.
      */
     public ServerHandler(){
        try {
@@ -30,9 +26,13 @@ public class ServerHandler {
     }
 
 
-    /*
-    Metoda statycnza - sprawdza, czy możemy utworzyć połaczenie z serwerem.
-    Zapisuje gniazdo do pola statycznego, aby nie było konieczności tworzenia go ponownie.
+    /**
+     * Static method responsible for making connection with server.
+     * If connection is active, server is online.
+     * If connection is inactive, server is offline.
+     * @param serverIpAddress
+     * @param serverPortNumber
+     * @return Status of connection (true mean connection established)
      */
     public static boolean isServerOnline(String serverIpAddress, int serverPortNumber){
         try {
@@ -43,13 +43,11 @@ public class ServerHandler {
             return false;
         }
     }
-
-
-    /*
-    Metoda służąca do autentykacji i autoryzacji użytkownika.
-    (sprawdza, czy dany użytkownik istnieje na serwerze i czy dane hasło jest zgodne z hasłem na serwerze).
-    true - użytkownik poprawnie podał dane
-    false - użytkownik podał błedne dane
+    /**
+     * Method responsible for the authentication process.
+     * @param username
+     * @param password
+     * @return  Operations result (true - user exist on server and password is correct).
      */
     public boolean authenticateUser(String username, String password) {
         try {
@@ -69,15 +67,13 @@ public class ServerHandler {
             e.printStackTrace();
             return false;
         }
-
-        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
         return false;
     }
-
-    /*
-    Metoda odpowiedzialna za zdalne dodawaine użytkownika do listy użytkowników serwisu.
-    true - poprawnie stworzono użytkownika
-    false - użytkownik już istnieje na liście użytkowników serwisu
+    /**
+     * Method responsible for the registration process.
+     * @param username
+     * @param password
+     * @return Operations result (true - user registered, false - user already exists on the server).
      */
     public boolean registerUser(String username, String password) {
         try {
@@ -98,15 +94,12 @@ public class ServerHandler {
             e.printStackTrace();
             return false;
         }
-
-        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
         return false;
     }
-
-
-    /*
-    Metoda odpowiedzialna za pobranie absolutnych ścieżek plików, znajdujących się na serwerze.
-    Metoda zwraca listę obiektów typu File (analogiczna lista jest w klasie User).
+    /**
+     * Method responsible for getting backup files list from server
+     * (server send absolute path of files)
+     * @return backup file list received from server
      */
     public ArrayList<File> getBackupFilesListFromServer(){
         ArrayList<File> backupFiles= new ArrayList<>();
@@ -125,15 +118,12 @@ public class ServerHandler {
             e.printStackTrace();
             return backupFiles;
         }
-
-        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
         return backupFiles;
     }
-
-
-    /*
-    Metoda odpowiedzialna za pobranie wszystkich wersji danego pliku.
-    Jako wersję pliku traktować będziemy datę modyfikacji zapisaną w Stringu.
+    /**
+     * Method responsible for getting all file versions stored on server side.
+     * @param file
+     * @return list of strings, each file version is represented by string (last modification date in proper format)
      */
     public ArrayList<String> getAllFileVersionsFromServer(File file){
         ArrayList<String> versionsList= new ArrayList<>();
@@ -154,16 +144,13 @@ public class ServerHandler {
             e.printStackTrace();
             return versionsList;
         }
-
-        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
         return versionsList;
     }
-
-
-    /*
-    Metoda odpowiedzialna za zdalne usunięcie wszystkich wersji pliku znajdujących się na serwerze.
-    Zwraca status operacji - true, jeżeli operacja powiodła się.
-    */
+    /**
+     * Method responsible for removing file with all file versions on server side.
+     * @param file
+     * @return operation result (true - success)
+     */
     public boolean removeSelectedFile(File file){
         try {
             out.println(ClientMessage.REMOVE_FILE.name());
@@ -177,15 +164,15 @@ public class ServerHandler {
             e.printStackTrace();
             return false;
         }
-
-        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
         return false;
     }
 
 
-    /*
-    Metoda odpowiedzialna za usunięcie konkretnej wersji pliku znajdującego się na serwerze.
-    Wersja oznaczona jest jako string zawierający datę modyfikacji.
+    /**
+     * Method responsible for removing one file version from server side.
+     * @param filePath
+     * @param fileVersion
+     * @return operation result (true - success)
      */
     public boolean removeSelectedFileVersion(String filePath, String fileVersion){
         try {
@@ -203,16 +190,13 @@ public class ServerHandler {
             e.printStackTrace();
             return false;
         }
-
-        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
         return false;
     }
-
-    /*
-    Metoda odpowiedzialna za usunięcie profilu użytkownika po stronie serwera.
-    (usuwa możliwość logowania oraz wszelkie zapisane pliki z nim związane)
+    /**
+     * Method responsible for deleting user on server side.
+     * @return operation result
      */
-    public boolean deleteUser(String username) {
+    public boolean deleteUser() {
         //rest of functionality handled byAppController
         try {
             out.println(ClientMessage.DELETE_USER.name());
@@ -223,15 +207,13 @@ public class ServerHandler {
             e.printStackTrace();
             return false;
         }
-
-        //dorobic jakas funkcjonalnosc, jakby sie cos pomylilo w komunikacji
         return false;
     }
-
-    /*
-    Metoda odpowiedzialna za wylogowanie użytkownika - informuje
+    /**
+     * Method responsible for the logout procedure.
+     * @return operation result
      */
-    public boolean logoutUser(String username) {
+    public boolean logoutUser() {
         try {
             out.println(ClientMessage.LOG_OUT.name());
             if (in.readLine().equals(ServerMessage.LOG_OUT_FINISHED.name())) {
@@ -243,10 +225,10 @@ public class ServerHandler {
         }
         return false;
     }
-
-
-    /*
-    Metoda zamykajaca połaczenie
+    /**
+     * Method responsible for the close connection process.
+     * - close input and output streams
+     * - close socket associated with active connection
      */
     public void closeConnection() {
         try {
@@ -259,46 +241,13 @@ public class ServerHandler {
     }
 
 
-    /**
-     * Metoda tworzy listę jednoelementową plików oraz uruchamia metodę backupAllFiles
-     * @param fileToArchive
-     * @param appController
-     */
-    public void backupOnlySelectedFile(File fileToArchive, AppController appController) {
-        ArrayList<File> filesToArchive = new ArrayList<>();
-        filesToArchive.add(fileToArchive);
-
-        this.backupAllFiles(filesToArchive, appController);
+    public static Socket getSocket() {
+        return socket;
     }
-
-    /**
-     * Metoda odpowiedzialna za uruchomienie nowego wątku związanego z obsługą procesu archiwizacji danych.
-     * @param filesToArchive
-     * @param appController
-     */
-    public void backupAllFiles(List<File> filesToArchive, AppController appController) {
-        BackupWorker backupWorker = new BackupWorker(
-                socket, in, out,
-                filesToArchive,
-                appController );
-        Thread backupThread = new Thread(backupWorker);
-        backupThread.start();
+    public BufferedReader getIn() {
+        return in;
     }
-
-    /**
-     * Metoda odpowiedzialna za uruchomienie nowego wątku związanego z obsługą procesu związanego z pobraniem
-     * wybranego archiwum z serwera.
-     * @param filePath
-     * @param fileVersion
-     */
-    public void restoreSelectedFileVersion(
-            String filePath, String fileVersion, File backupFile, AppController appController){
-
-        RestoreWorker restoreWorker = new RestoreWorker(
-                socket, in, out,
-                backupFile, filePath, fileVersion,
-                appController );
-        Thread restoreThread = new Thread(restoreWorker);
-        restoreThread.start();
+    public PrintWriter getOut() {
+        return out;
     }
 }

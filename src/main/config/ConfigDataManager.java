@@ -3,11 +3,10 @@ package main.config;
 import java.io.*;
 
 /**
- * Klasa służąca do statycznego zarzadzania danymi konfiguracyjnymi
- * Created by rkossowski on 18.11.2017.
+ * Static class for static management of configuration files
+ * Created by kkossowski on 18.11.2017.
  */
 public class ConfigDataManager {
-
 
     public static boolean isAppDirExists(){
         return new File(Properties.appDataDir).exists();
@@ -15,7 +14,6 @@ public class ConfigDataManager {
     public static boolean createAppDir(){
         return new File(Properties.appDataDir).mkdir();
     }
-
 
     public static boolean isGlobalConfigFileExists(){
         return new File(Properties.globalConfigFile).exists();
@@ -52,7 +50,6 @@ public class ConfigDataManager {
 
         }
     }
-
 
     public static boolean isUserConfigFileExists(String username){
         return new File(Properties.appDataDir + username + ".dat").exists();

@@ -1,7 +1,7 @@
 package main.networking;
 
 /**
- * Created by rkossowski on 18.11.2017.
+ * Created by kkossowski on 18.11.2017.
  */
 public enum ServerMessage {
     GET_USERNAME,

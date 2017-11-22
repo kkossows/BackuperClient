@@ -5,14 +5,12 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * Klasa opisująca pliki konfiguracyjne dotyczące poszczególnych użytkowników.
- * Created by rkossowski on 18.11.2017.
+ * Class for the user configuration files managing.
+ * Created by kkossowski on 18.11.2017.
  */
 public class UserConfig implements Serializable {
     String username;
     List<File> userFilesToArchive;
-
-
 
 
     public String getUsername() {

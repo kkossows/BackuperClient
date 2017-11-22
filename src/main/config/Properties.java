@@ -1,9 +1,8 @@
 package main.config;
 
 /**
- * Klasa zawiera zbiór danych używanych w aplikacji.
- * (łatwe do ewentualnej zmiany)
- * Created by rkossowski on 18.11.2017.
+ * Storage for default values.
+ * Created by kkossowski on 18.11.2017.
  */
 public class Properties {
 

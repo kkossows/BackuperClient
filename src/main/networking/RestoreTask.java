@@ -1,28 +1,25 @@
 package main.networking;
 
-import main.view.AppController;
+import javafx.concurrent.Task;
 
 import java.io.*;
 import java.net.Socket;
 
 /**
  * Class used to handle restoring file stuff.
- * Created by rkossowski on 19.11.2017.
+ * Created by kkossowski on 19.11.2017.
  */
-public class RestoreWorker implements Runnable {
+public class RestoreTask extends Task<Boolean> {
     private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
     private File emptyFileOnLocalSystem;
     private String filePath;
     private String fileVersion;
-    private AppController appController;
 
-
-    public RestoreWorker(
+    public RestoreTask(
             Socket socket, BufferedReader inputStream, PrintWriter outputStream,
-            File emptyFileOnLocalSystem, String filePath, String fileVersion,
-            AppController appController) {
+            File emptyFileOnLocalSystem, String filePath, String fileVersion){
 
         this.socket = socket;
         this.in = inputStream;
@@ -30,12 +27,13 @@ public class RestoreWorker implements Runnable {
         this.emptyFileOnLocalSystem = emptyFileOnLocalSystem;
         this.filePath = filePath;
         this.fileVersion = fileVersion;
-        this.appController = appController;
     }
 
-
     @Override
-    public void run() {
+    protected Boolean call() throws Exception {
+        //update label
+        this.updateMessage(filePath);
+
         boolean isSendingFile = false;
         long fileSize = 0;
 
@@ -72,7 +70,9 @@ public class RestoreWorker implements Runnable {
                             outputStream.write(buffer);
                             bytesToRead -= numberOfReadBytes;
                             bytesRead += numberOfReadBytes;
-                            appController.setStatisticLabelWithPercentRestoring((int) (bytesRead / fileSize));
+
+                            //set statistics
+                            this.updateProgress(bytesRead, fileSize);
                         }
                     }
                 }//close streams
@@ -80,14 +80,12 @@ public class RestoreWorker implements Runnable {
                 if (in.readLine().equals(ServerMessage.SENDING_FILE_FINISHED.name())) {
                     //restored file not show in files to archive list
                     //user only see informationDialog that restoring finised
-                    appController.showInformationDialog(
-                            "Restoring file finished.",
-                            "File saved in " + emptyFileOnLocalSystem.getAbsolutePath()
-                    );
+                    return true;
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+        return false;
     }
 }

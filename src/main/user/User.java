@@ -9,16 +9,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by rkossowski on 18.11.2017.
+ * Created by kkossowski on 18.11.2017.
  */
 public class User {
     private String username;
     private ServerHandler serverHandler;
     List<File> userFilesToArchive;
-
-    //variable needs to verify, if user variables are saved in globalconfig file to autocomplete
+    //variable needs to verify, if user variables are saved in globalConfig file to autocomplete
     boolean autoCompleteOn;
-
 
     public User(String username, ServerHandler serverHandler){
         this.username = username;
@@ -27,8 +25,11 @@ public class User {
         this.autoCompleteOn = false;
     }
 
-    //Methode load file list from config file
-    //If file not exist, it create it with empty list
+    /**
+     * Method responsible for loading files list from config file.
+     * - if file not exist, it create it with empty list
+     * @return list of files to archive
+     */
     private List<File> loadUserFilesToArchiveFromConfigFile(){
         UserConfig userConfig;
         if(ConfigDataManager.isUserConfigFileExists(this.username)){
@@ -37,7 +38,7 @@ public class User {
         else {
             userConfig = new UserConfig();
             userConfig.setUsername(this.username);
-            userConfig.setUserFilesToArchive(new ArrayList<File>());
+            userConfig.setUserFilesToArchive(new ArrayList<>());
             ConfigDataManager.createUserConfig(userConfig);
         }
         return userConfig.getUserFilesToArchive();
@@ -56,9 +57,6 @@ public class User {
         return autoCompleteOn;
     }
 
-    public void setUserFilesToArchive(List<File> userFilesToArchive) {
-        this.userFilesToArchive = userFilesToArchive;
-    }
     public void setAutoCompleteOn(boolean autoCompleteOn) {
         this.autoCompleteOn = autoCompleteOn;
     }

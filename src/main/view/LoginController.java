@@ -6,7 +6,6 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -21,7 +20,9 @@ import main.user.User;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
-
+/**
+ * Created by kkossowski on 18.11.2017.
+ */
 public class LoginController implements Initializable{
 
     //-------------FXML Variables LoginPane
@@ -29,12 +30,6 @@ public class LoginController implements Initializable{
     private AnchorPane loginPane;
     @FXML
     private StackPane container ;
-    @FXML
-    private Button btn_login;
-    @FXML
-    private Button btn_register;
-    @FXML
-    private Button btn_quit;
     @FXML
     private TextField tx_serverIp;
     @FXML
@@ -48,24 +43,25 @@ public class LoginController implements Initializable{
 
     //-------------FXML Variables WaitingPane
     @FXML
-    private Label lb_waitingPaneLabel;
-    @FXML
     private VBox waitingPane;
+    @FXML
+    private Label lb_waitingPaneLabel;
 
 
     //-------------Other variables
     private boolean isServerOnline = false;
 
-    //-------------FXML Methodes
-    /*
-    Metoda sprawdzająca, czy mozna wczytac dane z plików konfiguracyjnych, jezeli istnieją.
-    - jeżeli plik nie istnieje, to tworzymy go z domyslnymi wartościami;
-    - jeżeli plik zawiera wszystkie zmienne zapisanego użytkownika, to wpisz je automatycznie
-    - jeżeli plik nie zawiera wszystkich zmiennych, wpisz wartości domyślne z pliku konfiguracyjnego dotyczące serwer
+    //-------------FXML Methods
+    /**
+     * Method responsible for initiating login scene.
+     *  - if globalConfig file not exists, create it with default values
+     *  - if globalConfig file exists and user was remembered, complete all fields
+     *  - if globalConfig file exists and user was not remembered, complete only fields associated with server
+     * @param location
+     * @param resources
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        //if global config file not exist, create it with default variables
         if (!ConfigDataManager.isGlobalConfigFileExists()) {
             ConfigDataManager.createGlobalConfig(new GlobalConfig());
         }
@@ -82,16 +78,21 @@ public class LoginController implements Initializable{
             tx_serverPort.setText(Integer.toString(globalConfig.getDefaultServerPortNumber()));
         }
     }
-
-
-    /*
-    Metoda składająca się z następujących elmentów
-     1) sprawdź, czy serwer jest online
-     2) stworz dedykowanego ServerHandlera i spróbuj się zalogować
-     3) jeżeli użytkownik zaznaczył checkbox, zapisz dane do pliku globalconfig
-     4) stwórz obiekt klienta
-     5) zmień scene na aplikacje
-     6) przekaź klienta do kontrolera aplikacji
+    /**
+     * Method responsible for the login process.
+     * Steps:
+     *  1) check whether server is online
+     *  2) show waiting scene
+     *  3) create new task loginTask
+     *  4) in new task call authenticateUser method from ServerHandler class
+     *  5) if authentication was correct:
+     *      5.1) update waiting scene label
+     *      5.2) create logged in user object
+     *      5.3) add user to main application controller
+     *      5.4) update configuration files
+     *      5.5) verify whether user is saved in globalConfig file
+     *  5) show information dialog with registration result
+     * @param event
      */
     @FXML
     void btn_login_onClick(ActionEvent event) {
@@ -99,9 +100,8 @@ public class LoginController implements Initializable{
         isServerOnline = checkIfServerIsOnline();
 
         if(isServerOnline){
-            showWaitingScene();
             //declare tasks
-            Task<Boolean> loginTask = new Task<Boolean >() {
+            Task<Boolean> loginTask = new Task<Boolean>() {
                 @Override
                 protected Boolean call() throws Exception {
                     ServerHandler serverHandler = new ServerHandler();
@@ -116,12 +116,15 @@ public class LoginController implements Initializable{
                         updateMessage("LOGIN SUCCEEDED - Loading application view. Please wait...");
 
 
-                        //stwórz bierzącego użytkownika
+                        //create logged in user
+                        //user needs only username and serverHandler object with connected socket
                         User currentUser = new User(tx_username.getText(), serverHandler);
+
+                        //add user to main application controller
                         AppController appController = new AppController();
                         appController.setUser(currentUser);
 
-                        //aktualizacja plików konfiguracyjnych
+                        //update configuration files
                         if (cbox_remember.isSelected()) {
                             GlobalConfig newGlobalConfig = new GlobalConfig();
 
@@ -135,12 +138,11 @@ public class LoginController implements Initializable{
 
                             ConfigDataManager.createGlobalConfig(newGlobalConfig);
 
-                            //zaktualizuj flage u uzytkownika
+                            //update user flag
                             currentUser.setAutoCompleteOn(true);
                         }
 
-                        //sprawdz, czy użytkownik nie jest zapisany w pliku globalnym
-                        //jezeli jest, ustaw flagę na true
+                        //verify whether user is saved in globalConfig file - if true, set user flag
                         GlobalConfig globalConfig = ConfigDataManager.readGlobalConfig();
                         if (globalConfig.getSavedServerIpAddress().equals(tx_serverIp.getText())
                                 && globalConfig.getSavedServerPortNumber() == Integer.getInteger(tx_serverPort.getText())
@@ -154,14 +156,10 @@ public class LoginController implements Initializable{
                     return authenticationSuccess;
                 }
             };
-            //what happen after task finished with no error
+            //define what happen after task finished with no error
             loginTask.setOnSucceeded(e -> {
-
-                System.out.println("okolasdad");
-
                 if(loginTask.getValue()) {
-                    //przełącz sceny z logowania na główną scene aplikacji
-                    //(zrobione inaczej aby dodać już utworzony kontroler)
+                    //switch scenes
                     StackPane appPane = null;
                     try {
                         FXMLLoader loader = new FXMLLoader();
@@ -188,28 +186,34 @@ public class LoginController implements Initializable{
             });
             //set prompt text
             lb_waitingPaneLabel.setText("LOGIN PROCESS - Please wait...");
+
             //bind label to massageProperty to change text from task
             lb_waitingPaneLabel.textProperty().bind(loginTask.messageProperty());
+
+            //show waiting screen
+            showWaitingScene();
+
             //run task
             Thread loginThread = new Thread(loginTask);
             loginThread.setDaemon(true);
             loginThread.start();
         }
     }
-    /*
-    Metoda umożliwiająca zdalne utworzenie nowego użytkownika w serwisie.
-     1) sprawdź, czy serwer jest online
-     2) stworz dedykowanego ServerHandlera i spróbuj zarejestrować użytkownika
-     3) wyświetl komunikat o sukcesie lub błędzie (bład wystąpi wtedy, gdy dany użytkownik jest już zarejestrowany)
+    /**
+     * Method responsible for registering new user.
+     * Steps:
+     *  1) check whether server is online
+     *  2) show waiting scene
+     *  3) create new task registerTask
+     *  4) in new task call registerUser method from ServerHandler class
+     *  5) show information dialog with registration result
      */
     @FXML
-    void btn_register_onClick(ActionEvent event) throws IOException {
+    void btn_register_onClick() {
         isServerOnline = checkIfServerIsOnline();
         //new version with Task (no gui frozen)
         if(isServerOnline){
-            showWaitingScene();
-
-            Task<Boolean> registerTast = new Task<Boolean >() {
+            Task<Boolean> registerTask = new Task<Boolean >() {
                 @Override
                 protected Boolean call() throws Exception {
                     ServerHandler serverHandler = new ServerHandler();
@@ -220,9 +224,9 @@ public class LoginController implements Initializable{
                     return registrationSucceeded;
                 }
             };
-            //what happen after task finished with no error
-            registerTast.setOnSucceeded(e -> {
-                if(registerTast.getValue()){
+            //define what happen after task finished with no error
+            registerTask.setOnSucceeded(e -> {
+                if(registerTask.getValue()){
                     showInformationDialog(
                             "REGISTRATION SUCCEEDED",
                             "User added correctly. Please login."
@@ -241,14 +245,19 @@ public class LoginController implements Initializable{
             });
             //set prompt text
             lb_waitingPaneLabel.setText("REGISTRATION PROCESS - Please wait...");
+
+            //show waiting screen
+            showWaitingScene();
+
             //run task
-            Thread registerThread = new Thread(registerTast);
+            Thread registerThread = new Thread(registerTask);
             registerThread.setDaemon(true);
             registerThread.start();
         }
     }
     @FXML
-    void btn_quit_onClick(ActionEvent event) {
+    void btn_quit_onClick() {
+        //close application
         Platform.exit();
     }
 
@@ -281,7 +290,7 @@ public class LoginController implements Initializable{
     }
 
 
-    //-------------Other Methodes
+    //-------------Other Methods
     private boolean checkIfServerIsOnline(){
         // trim usuwa białe znaki
         if (tx_serverIp.getText().trim().isEmpty() || tx_serverPort.getText().trim().isEmpty()

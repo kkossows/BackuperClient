@@ -3,16 +3,23 @@ package main.view;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import main.config.ConfigDataManager;
 import main.config.GlobalConfig;
 import main.config.UserConfig;
+import main.networking.BackupTask;
+import main.networking.RestoreTask;
 import main.user.User;
 
 import java.io.File;
@@ -20,15 +27,20 @@ import java.io.IOException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
 /**
  * Created by kkossowski on 18.11.2017.
  */
-public class AppController implements Initializable{
+public class AppController implements Initializable {
 
     //----------------------FXML Variables
+    @FXML
+    private AnchorPane appPane;
+    @FXML
+    private StackPane container;
     @FXML
     private Label lb_username;
     @FXML
@@ -58,48 +70,59 @@ public class AppController implements Initializable{
     private MenuItem mi_autocomplete;
 
 
+    //-------------FXML Variables WaitingPane
+    @FXML
+    private VBox waitingPane;
+    @FXML
+    private Label lb_waitingPaneLabel;
+
     //----------------------Other Variables
     private User user;
 
 
-
     //----------------------FXML Methods
+
     /**
-     * Metoda inicjalizuje wszystkie pola:
-     * 1) wpisuje zalogowane użytkownika w miejsce username
-     * 2) wczytuje wszystkie pliki do archiwizacji używane przez użytkownika
-     * 3) wczytuje wszystkie pliki zarchiwizowane na serwerze
-     * 4) przypisuje wszystkie obserwowane listy do ich reprezentacji w widoku
+     * Method responsible for initiating main application scene.
+     * 1) set user name
+     * 2) load all files that user backed up on last session and show them in Files to archive listView
+     * 3) load files from server side and show them in Files on server listView
+     * 4) set all observable lists to appropriate views
+     * 5) turn on or off menuItem with autocomplete - decision based on user flag
+     * 6) hide progress statistics
+     *
+     * @param location
+     * @param resources
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        System.out.println("okol");
-//        //set user name
-//        lb_username.setText(user.getUsername());
-//
-//        //load all files that user backed up on last session
-//        filesToArchive.addAll(user.getUserFilesToArchive());
-//        //set list to view
-//        lv_filesToArchive.setItems(filesToArchive);
-//        lv_filesToArchive.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-//
-//        //load files from server side
-//        filesOnServer.addAll(user.getServerHandler().getBackupFilesListFromServer());
-//        //set list to view
-//        lv_filesOnServer.setItems(filesOnServer);
-//        lv_filesOnServer.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-//
-//        //set last list to view
-//        lv_fileVersions.setItems(fileVersions);
-//        lv_fileVersions.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-//
-//        //turn on or off menuItem with autocomplete based on user flag
-//        if(!user.isAutoCompleteOn())
-//            mi_autocomplete.setDisable(false);
-//
-//        //hide progress statistics
-//        hideProgressStatistics();
+        //set user name
+        lb_username.setText(user.getUsername());
+
+        //load all files that user backed up on last session
+        filesToArchive.addAll(user.getUserFilesToArchive());
+        //set list to view
+        lv_filesToArchive.setItems(filesToArchive);
+        lv_filesToArchive.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+
+        //load files from server side
+        filesOnServer.addAll(user.getServerHandler().getBackupFilesListFromServer());
+        //set list to view
+        lv_filesOnServer.setItems(filesOnServer);
+        lv_filesOnServer.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+
+        //set last list to view
+        lv_fileVersions.setItems(fileVersions);
+        lv_fileVersions.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+
+        //turn on or off menuItem with autocomplete based on user flag
+        if (!user.isAutoCompleteOn())
+            mi_autocomplete.setDisable(false);
+
+        //hide progress statistics
+        hideProgressStatistics();
     }
+
 
     private void showProgressStatistics() {
         lb_filePath.setVisible(true);
@@ -107,8 +130,12 @@ public class AppController implements Initializable{
         lb_copying.setVisible(true);
         progressBar.setVisible(true);
         progressIndicator.setVisible(true);
+
+        //clear
+        progressBar.setProgress(0);
+        progressIndicator.setProgress(0);
     }
-    private void hideProgressStatistics(){
+    private void hideProgressStatistics() {
         lb_filePath.setVisible(false);
         lb_progressType.setVisible(false);
         lb_copying.setVisible(false);
@@ -116,137 +143,201 @@ public class AppController implements Initializable{
         progressIndicator.setVisible(false);
     }
 
+
     @FXML
     public void btn_addFile_OnClick(ActionEvent event) {
         FileChooser fileChooser = new FileChooser();
         //new window has to be closed to continue operation on main window
         //otherwise change stage showOpenDialog(...) to showOpenDialog(null)
-        File file = fileChooser.showOpenDialog((Stage) ((Node) event.getSource()).getScene().getWindow());
+        File file = fileChooser.showOpenDialog(((Node) event.getSource()).getScene().getWindow());
         if (file != null) {
             filesToArchive.add(file);
         }
 
-        //only with closing the app, userConfigFile is updated
+        //userConfigFile is updated only with closing the app
     }
     @FXML
-    public void btn_removeSelectedFile_OnClick(ActionEvent event) {
+    public void btn_removeSelectedFile_OnClick() {
         int index = lv_filesToArchive.getSelectionModel().getSelectedIndex();
         if (index > -1) {
             filesToArchive.remove(index);
-        }
-        else {
+        } else {
             showWarningDialog(
                     "Error",
                     "No file selected. Please first select the file and press button again."
-            ) ;
+            );
         }
     }
     @FXML
-    public void btn_removeAllFiles_OnClick(ActionEvent event){
+    public void btn_removeAllFiles_OnClick() {
         filesToArchive.clear();
     }
 
 
     @FXML
-    public void btn_backupAll_OnClick(ActionEvent event){
-        if (filesToArchive.size() == 0){
+    public void btn_backupAll_OnClick() {
+        if (filesToArchive.size() == 0) {
             showWarningDialog(
                     "No files to archive.",
                     "Please, add file(s) and click the button again."
             );
-        }
-        else {
-            user.getServerHandler().backupAllFiles(
-                    filesToArchive,
-                    this
-            );
+        } else {
+            //create new Task
+            makeBackup(filesToArchive);
         }
 
     }
     @FXML
-    public void btn_backupOnlySelected_OnClick(ActionEvent event) {
+    public void btn_backupOnlySelected_OnClick() {
         //check if user selected file
         int index = lv_filesToArchive.getSelectionModel().getSelectedIndex();
         if (index > -1) {
-            user.getServerHandler().backupOnlySelectedFile(
-                    filesToArchive.get(index),
-                    this
+            //create new Task
+            makeBackup(
+                    new ArrayList<File>(){{ filesToArchive.get(index); }}
+            );
+        } else {
+            showWarningDialog(
+                    "Error",
+                    "No file selected. Please first select the file and press button again."
             );
         }
-        else {
-            showWarningDialog(
-                    "Error",
-                    "No file selected. Please first select the file and press button again."
-            ) ;
-        }
+    }
+    private void makeBackup(List<File> filesToArchive){
+        //create new Task
+        Task<Boolean> backupTask = new BackupTask(
+                user.getServerHandler().getSocket(),
+                user.getServerHandler().getIn(),
+                user.getServerHandler().getOut(),
+                filesToArchive,
+                filesOnServer
+        );
+        //define what happen after task finished with no error
+        backupTask.setOnSucceeded(e ->{
+            if(backupTask.getValue()){
+                progressBar.progressProperty().unbind();
+                progressIndicator.progressProperty().unbind();
+                lb_filePath.textProperty().unbind();
+
+                showInformationDialog(
+                        "All files sent.",
+                        "Backup complete."
+                );
+            }
+        });
+        //bind variables
+        progressBar.progressProperty().bind(backupTask.progressProperty());
+        progressIndicator.progressProperty().bind(backupTask.progressProperty());
+        lb_filePath.textProperty().bind(backupTask.messageProperty());
+
+        //set statistics title
+        lb_progressType.setText("Backup files:");
+
+        //show statistics
+        showProgressStatistics();
+
+        //run task
+        Thread backupThread = new Thread(backupTask);
+        backupThread.setDaemon(true);
+        backupThread.start();
     }
 
-
     @FXML
-    public void btn_showVersionFile_OnClick(ActionEvent event){
+    public void btn_showVersionFile_OnClick() {
         //verify whether user select any file
-        int indexOfSelectedFile =  lv_filesOnServer.getSelectionModel().getSelectedIndex();
+        final int indexOfSelectedFile = lv_filesOnServer.getSelectionModel().getSelectedIndex();
 
-        if(indexOfSelectedFile > -1) {
-            //get selected file indexOfSelectedFile and find it in arraylist to get require file
-            File selectedFile = filesOnServer.get(indexOfSelectedFile);
+        //declare tasks
+        Task<ArrayList<String>> showVersionTask = new Task<ArrayList<String>>() {
+            @Override
+            protected ArrayList<String> call() throws Exception {
+                if (indexOfSelectedFile > -1) {
+                    //get selected file indexOfSelectedFile and find it in arraylist to get require file
+                    File selectedFile = filesOnServer.get(indexOfSelectedFile);
 
-            //get list from server
-            ArrayList<String> receivedList = user.getServerHandler().getAllFileVersionsFromServer(selectedFile);
+                    //return received list from server
+                    return user.getServerHandler().getAllFileVersionsFromServer(selectedFile);
+                } else {
+                    return null;
+                }
+            }
+        };
+        //define what happen after task finished with no error
+        showVersionTask.setOnSucceeded(e -> {
+            if (showVersionTask.getValue() != null) {
+                //add hole list to observable list
+                fileVersions.addAll(showVersionTask.getValue());
 
-            //add hole list to observable list
-            fileVersions.addAll(receivedList);
-
-            //set file name label
-            lb_fileName.setText(selectedFile.getAbsolutePath());
-        }
-        else {
-            showWarningDialog(
-                    "Error",
-                    "No file selected. Please first select the file and press button again."
-            ) ;
-        }
+                //set file name label
+                lb_fileName.setText(filesOnServer.get(indexOfSelectedFile).getAbsolutePath());
+            } else {
+                showWarningDialog(
+                        "Error",
+                        "No file selected. Please first select the file and press button again."
+                );
+            }
+        });
+        //run task
+        Thread showVersionThread = new Thread(showVersionTask);
+        showVersionThread.setDaemon(true);
+        showVersionThread.start();
     }
     @FXML
-    public void btn_removeSelectedFileFromServer_OnClick(ActionEvent event){
+    public void btn_removeSelectedFileFromServer_OnClick() {
         //method remove all versions of selected file
         int indexOfSelectedFile = lv_filesOnServer.getSelectionModel().getSelectedIndex();
 
         if (indexOfSelectedFile > -1) {
-            boolean isConfirmed = showConfirmationDialog(
+            final boolean isConfirmed = showConfirmationDialog(
                     "Removing file means remove all file backup versions on server\n"
                             + "File: " + filesOnServer.get(indexOfSelectedFile),
                     "Continue?");
 
-            if (isConfirmed) {
-                boolean fileRemoved = user.getServerHandler().removeSelectedFile(
-                        filesOnServer.get(indexOfSelectedFile)
-                );
 
-                //remove all version from view if file was proceeded before
-                if (lb_fileName.getText().equals(filesOnServer.get(indexOfSelectedFile).getAbsolutePath())){
-                    fileVersions.clear();
-                    lb_fileName.setText("");
+            //declare tasks
+            Task<Boolean> removeFileTask = new Task<Boolean>() {
+                @Override
+                protected Boolean call() throws Exception {
+                    if (isConfirmed) {
+                        boolean fileRemoved = user.getServerHandler().removeSelectedFile(
+                                filesOnServer.get(indexOfSelectedFile)
+                        );
+                        return fileRemoved;
+                    } else {
+                        return false;
+                    }
                 }
+            };
+            removeFileTask.setOnSucceeded(e -> {
+                if (removeFileTask.getValue()) {
+                    //remove selected file from list and view
+                    if (lb_fileName.getText().equals(filesOnServer.get(indexOfSelectedFile).getAbsolutePath())) {
+                        fileVersions.clear();
+                        lb_fileName.setText("");
+                    }
 
-                //remove selected file from list and view
-                if (fileRemoved) {
+                    //remove selected file from list and view
                     filesOnServer.remove(indexOfSelectedFile);
                 }
-            }
-        }
-        else {
+            });
+            //run task
+            Thread removeFileThread = new Thread(removeFileTask);
+            removeFileThread.setDaemon(true);
+            removeFileThread.start();
+        } else {
             showWarningDialog(
                     "Error",
                     "No file selected. Please first select the file and press button again."
-            ) ;
+            );
         }
     }
     @FXML
-    public void btn_restoreSelectedFileVersion_OnClick(ActionEvent event){
+    public void btn_restoreSelectedFileVersion_OnClick() {
+        //WARNING! - restored file will not be added to files to archive!
+
         int indexOfSelectedVileVersion = lv_fileVersions.getSelectionModel().getSelectedIndex();
 
-        if (indexOfSelectedVileVersion > -1){
+        if (indexOfSelectedVileVersion > -1) {
             //check if file is already on local file system
             //if it is, ask if user want to override it or create new file with
             String backupFilePath = lb_fileName.getText();
@@ -262,6 +353,7 @@ public class AppController implements Initializable{
 
                 if (backupFileVersion.equals(localFileVersion)) {
                     //same versions - show information and return from method
+
                     showInformationDialog(
                             "Same file versions",
                             "Selected version file already exists on local system file."
@@ -275,8 +367,10 @@ public class AppController implements Initializable{
                     int questionAnswer = showYesNoDialog(
                             "Different file version on local file system.",
                             "Do you want to override file?\nYES-override\nNO-create new file with version in name"
+
                     );
 
+                    //preparing empty File
                     switch (questionAnswer) {
                         case 1:
                             //user want to override existing file
@@ -291,13 +385,12 @@ public class AppController implements Initializable{
                             String newBackupFilePath;
                             newBackupFilePath = backupFile.getParent() + "/" + newBackupFileName;
 
-                            backupFile = new File (newBackupFilePath);
+                            backupFile = new File(newBackupFilePath);
                             break;
                         case -1:
                             //user canceled operation - end method
                             return;
                     }
-
                     //create empty file
                     try {
                         backupFile.createNewFile();
@@ -305,8 +398,7 @@ public class AppController implements Initializable{
                         e.printStackTrace();
                     }
                 }
-            }
-            else {
+            } else {
                 //file not exist on local file system
 
                 //create sub-folders and empty file
@@ -318,23 +410,50 @@ public class AppController implements Initializable{
                 }
             }
 
-            //run serverHandler method
-            user.getServerHandler().restoreSelectedFileVersion(
-                    backupFilePath,
-                    backupFileVersion,
-                    backupFile,
-                    this
+            //create new Task
+            Task<Boolean> restoringTask = new RestoreTask(
+                    user.getServerHandler().getSocket(),
+                    user.getServerHandler().getIn(),
+                    user.getServerHandler().getOut(),
+                    backupFile, backupFilePath, backupFileVersion
             );
-        }
-        else {
+            //bind variables
+            progressBar.progressProperty().bind(restoringTask.progressProperty());
+            progressIndicator.progressProperty().bind(restoringTask.progressProperty());
+            lb_filePath.textProperty().bind(restoringTask.messageProperty());
+
+            //set statistics title
+            lb_progressType.setText("Restoring file:");
+
+            //show statistics
+            showProgressStatistics();
+
+            //define what happen after task finished with no error
+            restoringTask.setOnSucceeded(e -> {
+                if (restoringTask.getValue()) {
+                    progressBar.progressProperty().unbind();
+                    progressIndicator.progressProperty().unbind();
+                    lb_filePath.textProperty().unbind();
+
+                    showInformationDialog(
+                            "Restoring file finished.",
+                            ""
+                    );
+                }
+            });
+            //run task
+            Thread restoringThread = new Thread(restoringTask);
+            restoringThread.setDaemon(true);
+            restoringThread.start();
+        } else {
             showWarningDialog(
                     "Error",
                     "No file selected. Please first select the file and press button again."
-            ) ;
+            );
         }
     }
     @FXML
-    public void btn_removeFileVersion_OnClick(ActionEvent event){
+    public void btn_removeFileVersion_OnClick() {
         int indexOfSelectedFileVersion = lv_fileVersions.getSelectionModel().getSelectedIndex();
 
         if (indexOfSelectedFileVersion > -1) {
@@ -344,44 +463,58 @@ public class AppController implements Initializable{
                             + "Version: " + fileVersions.get(indexOfSelectedFileVersion),
                     "Continue?");
 
-            if (isConfirmed) {
-                boolean fileVersionRemoved = user.getServerHandler().removeSelectedFileVersion(
-                        lb_fileName.getText(),
-                        fileVersions.get(indexOfSelectedFileVersion)
-                );
-
-                //if it was the last version, remove also file from filesOnServerList
-                if (fileVersions.size() == 1){
-                    int indexOfFileWithNoVersion = -1;
-                    //find file
-                    for (int i = 0; i < filesOnServer.size(); i++){
-                        if(filesOnServer.get(i).getAbsolutePath().equals(lb_fileName.getText())){
-                            indexOfFileWithNoVersion = i;
-                            break;
-                        }
+            //declare tasks
+            Task<Boolean> removeFileVersionTask = new Task<Boolean>() {
+                @Override
+                protected Boolean call() throws Exception {
+                    if (isConfirmed) {
+                        boolean fileVersionRemoved = user.getServerHandler().removeSelectedFileVersion(
+                                lb_fileName.getText(),
+                                fileVersions.get(indexOfSelectedFileVersion)
+                        );
+                        return fileVersionRemoved;
+                    } else {
+                        return false;
                     }
-                    //remove file from list
-                    if (indexOfFileWithNoVersion != -1){
-                        filesOnServer.remove(indexOfFileWithNoVersion);
-                    }
-                    //remove file name label
-                    lb_fileName.setText("");
                 }
+            };
+            removeFileVersionTask.setOnSucceeded(e -> {
+                if (removeFileVersionTask.getValue()) {
+                    //if it was the last version, remove also file from filesOnServerList
+                    if (fileVersions.size() == 1) {
+                        int indexOfFileWithNoVersion = -1;
+                        //find file
+                        for (int i = 0; i < filesOnServer.size(); i++) {
+                            if (filesOnServer.get(i).getAbsolutePath().equals(lb_fileName.getText())) {
+                                indexOfFileWithNoVersion = i;
+                                break;
+                            }
+                        }
+                        //remove file from list
+                        if (indexOfFileWithNoVersion != -1) {
+                            filesOnServer.remove(indexOfFileWithNoVersion);
+                        }
+                        //remove file name label
+                        lb_fileName.setText("");
+                    }
 
-                //remove selected file version from list and view
-                if (fileVersionRemoved) {
+                    //remove selected file version from list and view
                     fileVersions.remove(indexOfSelectedFileVersion);
                 }
-            }
+            });
+            //run task
+            Thread removeFileVersionThread = new Thread(removeFileVersionTask);
+            removeFileVersionThread.setDaemon(true);
+            removeFileVersionThread.start();
+
         }
         else {
             showWarningDialog(
                     "Error",
                     "No file selected. Please first select the file and press button again."
-            ) ;
+            );
         }
     }
-
 
 
     @FXML
@@ -390,44 +523,78 @@ public class AppController implements Initializable{
         primaryStage.setIconified(true);
     }
     @FXML
-    public void btn_quit_OnClick(ActionEvent event){
-        //logout user
-        boolean isSucceeded = user.getServerHandler().logoutUser(lb_username.getText());
+    public void btn_quit_OnClick(){
 
-        if (isSucceeded){
-            //close session connection
-            user.getServerHandler().closeConnection();
+        //declare tasks
+        Task<Boolean> logoutTask = new Task<Boolean>() {
+            @Override
+            protected Boolean call() throws Exception {
+                //logout user
+                boolean isSucceeded = user.getServerHandler().logoutUser();
 
-            //update userConfigFile
-            UserConfig newUserConfig = new UserConfig();
-            newUserConfig.setUsername(user.getUsername());
-            newUserConfig.setUserFilesToArchive(filesToArchive);
-            ConfigDataManager.createUserConfig(newUserConfig);
+                if (isSucceeded) {
+                    //show information
+                    updateMessage("USER LOGOUT. Application will close soon...");
 
-            //close application
-            Platform.exit();
-        }
+                    //close session connection
+                    user.getServerHandler().closeConnection();
+
+                    //update userConfigFile
+                    UserConfig newUserConfig = new UserConfig();
+                    newUserConfig.setUsername(user.getUsername());
+                    newUserConfig.setUserFilesToArchive(filesToArchive);
+                    ConfigDataManager.createUserConfig(newUserConfig);
+
+                    //some visial efects
+                    Thread.sleep(300);
+                }
+                return isSucceeded;
+            }
+        };
+        //set name
+        lb_waitingPaneLabel.setText("LOGOUT PROCEDURE. Please wait...");
+
+        //bind label
+        lb_waitingPaneLabel.textProperty().bind(logoutTask.messageProperty());
+
+        //show waiting screen
+        showWaitingScene();
+
+        //define what happen after task finished with no error
+        logoutTask.setOnSucceeded(e -> {
+            if (logoutTask.getValue())
+            {
+                //close application
+                Platform.exit();
+            }
+        });
+        //run task
+        Thread logoutThread = new Thread(logoutTask);
+        logoutThread.setDaemon(true);
+        logoutThread.start();
     }
 
 
-
-
     /**
-    * Metoda pozwala wyłączyć autouzupełnianie formularza logującego.
-    * (usuwa z pliku globalconfig dane użytkownika)
+     * Method used to switch off automatic filling login form when user clicked remember me.
+     * (delete all variables from globalConfig file and set only default ones)
      */
     @FXML
-    public void mi_autocomplete_OnClick(ActionEvent event){
+    public void mi_autocomplete_OnClick(){
         ConfigDataManager.createGlobalConfig(new GlobalConfig());
-        showInformationDialog("Disable autocomplete login formula done", "Operation succeeded");
+        showInformationDialog(
+                "Disable autocomplete login formula done",
+                "Operation succeeded"
+        );
     }
     /**
-    Metoda pozwala usunąć użytkownika z serwera.
-    - usuwa pliki w pamięci lokalnej
-    - usuwa pliki w pamięci zdalnej
+     * Method responsible for the delete user process.
+     * 1) delete all files in local storage system
+     * 2) delete all files remotely on server storage system
+     * 3) quit application
      */
     @FXML
-    public void mi_deleteProfile_OnClick(ActionEvent event){
+    public void mi_deleteProfile_OnClick(){
         boolean isConfirmed = showConfirmationDialog(
                 "Deleting user will remove all backup data on server.",
                 "Continue?"
@@ -435,37 +602,95 @@ public class AppController implements Initializable{
 
         //deleting also logout on server side
         if(isConfirmed){
-            boolean isSucceeded = user.getServerHandler().deleteUser(lb_username.getText());
-            if (isSucceeded){
-                //close session connection
-                user.getServerHandler().closeConnection();
+            Task<Boolean> deleteProfile = new Task<Boolean>() {
+                @Override
+                protected Boolean call() throws Exception {
+                    boolean isSucceeded = user.getServerHandler().deleteUser();
+                    if (isSucceeded){
+                        //update view label
+                        updateMessage("USER DELETED. Application will close soon.");
 
-                //delete local files
-                ConfigDataManager.removeUserConfig(lb_username.getText());
-                if(user.isAutoCompleteOn()){
-                    ConfigDataManager.createGlobalConfig(new GlobalConfig());
+                        //close session connection
+                        user.getServerHandler().closeConnection();
+
+                        //delete local files
+                        ConfigDataManager.removeUserConfig(lb_username.getText());
+                        if(user.isAutoCompleteOn()){
+                            ConfigDataManager.createGlobalConfig(new GlobalConfig());
+                        }
+
+                        //some visual effects
+                        Thread.sleep(300);
+                    }
+                    return isSucceeded;
                 }
+            };
+            deleteProfile.setOnSucceeded(event -> {
+                if(deleteProfile.getValue()){
+                    showInformationDialog(
+                            "Your profile has been deleted.",
+                            "Application will be closed."
+                    );
+                    //close application
+                    Platform.exit();
+                }
+            });
+            //set prompt text
+            lb_waitingPaneLabel.setText("DELETING PROCESS - Please wait...");
 
-                showInformationDialog(
-                        "Your profile has been deleted.",
-                        "Application will be closed."
-                );
-                //close application
-                Platform.exit();
-            }
+            //bind label
+            lb_waitingPaneLabel.textProperty().bind(deleteProfile.messageProperty());
+
+            //show waiting screen
+            showWaitingScene();
+
+            //run task in new thread
+            Thread deleteThread = new Thread(deleteProfile);
+            deleteThread.setDaemon(true);
+            deleteThread.start();
         }
     }
     /**
-     * Metoda wyświetlająca podstawowe dane na temat aplikacji.
+     * Method display information dialog with application details.
      */
     @FXML
-    public void mi_about_OnClick(ActionEvent event){
+    public void mi_about_OnClick(){
         showInformationDialog(
                 "BACKUPER - backup your file to remote server",
                 "Version: 1.0\n More information in user manual."
         );
     }
 
+
+
+    private void showWaitingScene(){
+        if (waitingPane == null){
+            //load waiting controller
+            try {
+                FXMLLoader waitingLoader = new FXMLLoader(
+                        getClass().getResource("/fxml/Waiting.fxml")
+                );
+                waitingLoader.setController(this);
+                waitingPane = (VBox) waitingLoader.load();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        //set style
+        waitingPane.setStyle("-fx-background-color: rgba(0, 0, 0, 0.5);");
+        waitingPane.setMaxSize(800.0, 400.0);
+        //add waitingPane to view
+        container.getChildren().add(waitingPane);
+        //disable login pane
+        appPane.setDisable(true);
+    }
+    private void deleteWaitingScene(){
+        //remove waiting pane
+        container.getChildren().remove(waitingPane);
+        //enable login pane
+        appPane.setDisable(false);
+    }
 
     //-----------------------Other Methods
     /**
@@ -525,20 +750,5 @@ public class AppController implements Initializable{
         } else {
             return -2;
         }
-    }
-
-    //-----------------------Public Methods
-    public void setStatisticLabelWithNumber(int currentNumber, int finalNumber){
-        //lb_statistics_number.setText(currentNumber + "/" + finalNumber);
-    }
-    public void setStatisticLabelWithPercent(int percentValue){
-        //lb_statistics_percent.setText(percentValue + "%");
-    }
-    public void setStatisticLabelWithPercentRestoring(int percentValue){
-        //lb_statistics_percentRestoring.setText(percentValue + "%");
-    }
-
-    public void addFileOnServerList(File newFile){
-        filesOnServer.add(newFile);
     }
 }

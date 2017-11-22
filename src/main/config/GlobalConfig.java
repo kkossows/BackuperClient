@@ -3,8 +3,8 @@ package main.config;
 import java.io.Serializable;
 
 /**
- * Klasa dotycząca głównego pliku konfiguracyjnego aplikacji.
- * Created by rkossowski on 18.11.2017.
+ * Class for the main application configuration files managing.
+ * Created by kkossowski on 18.11.2017.
  */
 public class GlobalConfig implements Serializable {
 
@@ -29,7 +29,7 @@ public class GlobalConfig implements Serializable {
 
     }
 
-    //If globalConfig has tsaved values, it means that sb checked remember checkbox
+    //If globalConfig has saved values, it means that sb checked remember checkbox
     public boolean isUserRemembered(){
         if (savedServerIpAddress != ""
                 && savedServerPortNumber != 0

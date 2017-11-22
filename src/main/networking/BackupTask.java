@@ -1,40 +1,38 @@
 package main.networking;
 
-import main.view.AppController;
+import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 
 import java.io.*;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.List;
-import java.util.Properties;
-
-import static oracle.jrockit.jfr.events.Bits.intValue;
 
 /**
  * Class to handle backup files stuff.
  * Created by kkossowski on 19.11.2017.
  */
-public class BackupWorker implements Runnable {
+public class BackupTask extends Task<Boolean> {
     private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
     private List<File> filesToArchive;
-    private AppController appController;
+    private ObservableList<File> filesOnServer;
 
 
-    public BackupWorker(
+    public BackupTask(
             Socket socket, BufferedReader inputStream, PrintWriter outputStream,
-            List<File> filesToArchive, AppController appController) {
+            List<File> filesToArchive, ObservableList<File> filesOnServer) {
 
         this.socket = socket;
         this.in = inputStream;
         this.out = outputStream;
         this.filesToArchive = filesToArchive;
-        this.appController = appController;
+        this.filesOnServer = filesOnServer;
     }
 
     @Override
-    public void run() {
+    protected Boolean call() throws Exception {
         //statistics variables
         int stats_filesToArchive = filesToArchive.size();
         int stats_sendingFileNumber = 0;
@@ -43,7 +41,10 @@ public class BackupWorker implements Runnable {
         for ( File file : filesToArchive) {
             //update statistics variables
             stats_sendingFileNumber += 1;
-            appController.setStatisticLabelWithNumber(stats_sendingFileNumber, stats_filesToArchive);
+            this.updateMessage(
+                    "[" + stats_sendingFileNumber + "/" +  stats_filesToArchive + "]"
+                    + " ->" + file.getAbsolutePath()
+            );
 
             //check if file exist on server
             boolean sendFile = false;
@@ -62,11 +63,6 @@ public class BackupWorker implements Runnable {
                             }
                             else if (in.readLine().equals(ServerMessage.FILE_VERSION_EXISTS.name())){
                                 sendFile = false;
-
-                                appController.showInformationDialog(
-                                        "Backup file" + file.getName(),
-                                        "File version already exists on server. Data not transmitted."
-                                );
                             }
                         }
                     }
@@ -93,7 +89,8 @@ public class BackupWorker implements Runnable {
                         outputStream.write(buffer);
                         bytesToSend -= numberOfReadBytes;
                         bytesSent += numberOfReadBytes;
-                        appController.setStatisticLabelWithPercent((int) (bytesSent / fileSize));
+                        //update statistics
+                        updateProgress(bytesSent, fileSize);
                     }
                 }//close streams
             } catch (IOException e) {
@@ -101,18 +98,19 @@ public class BackupWorker implements Runnable {
             }
             if (sendFile) {
                 //update server list
-                appController.addFileOnServerList(file);
+                filesOnServer.add(file);
 
                 //inform server side, that the transmission is finished
                 out.println(ClientMessage.BACKUP_FILE_FINISHED.name());
             }
         }
+        return true;
     }
 
     /**
-     * Metoda pomocnicza - zwraca stringa utworzonego na podstawie daty modyfikacji pliku
+     * Method responsible for getting proper format of file last modify.
      * @param file
-     * @return
+     * @return string format MM-dd-yyyy_HH-mm-ss
      */
     private String getVersionOfFile(File file){
         SimpleDateFormat sdf = new SimpleDateFormat("MM-dd-yyyy_HH-mm-ss");
