@@ -6,121 +6,115 @@
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Line?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="400.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1" fx:controller="main.view.AppController">
-   <children>
-      <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="800.0">
-         <top>
-            <MenuBar BorderPane.alignment="CENTER">
-              <menus>
-                <Menu mnemonicParsing="false" text="Settings">
-                  <items>
-                    <MenuItem fx:id="mi_autocomplete" mnemonicParsing="false" onAction="#mi_autocomplete_OnClick" text="Disable autocomplete" />
-                        <MenuItem fx:id="mi_deleteProfile" mnemonicParsing="false" onAction="#mi_deleteProfile_OnClick" text="Delete profile" />
-                  </items>
-                </Menu>
-                <Menu mnemonicParsing="false" text="Help">
-                  <items>
-                    <MenuItem fx:id="mi_about" mnemonicParsing="false" onAction="#mi_about_OnClick" text="About" />
-                  </items>
-                </Menu>
-              </menus>
-            </MenuBar>
-         </top>
-         <left>
-            <VBox alignment="CENTER" prefHeight="336.0" prefWidth="233.0" BorderPane.alignment="CENTER">
-               <children>
-                  <Label text="Files to archive" />
-                  <ListView fx:id="lv_filesToArchive" prefHeight="200.0" prefWidth="219.0" />
-                  <Button fx:id="btn_addFile" mnemonicParsing="false" onAction="#btn_addFile_OnClick" prefHeight="24.0" prefWidth="262.0" text="Add file" />
-                  <Button fx:id="btn_removeFile" mnemonicParsing="false" onAction="#btn_removeSelectedFile_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove selected file" />
-                  <Button fx:id="btn_removeAllFiles" mnemonicParsing="false" onAction="#btn_removeAllFiles_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove all files" />
-               </children>
-            </VBox>
-         </left>
-         <right>
-            <HBox BorderPane.alignment="CENTER">
-               <children>
-                  <VBox alignment="CENTER" prefHeight="336.0" prefWidth="210.0">
-                     <children>
-                        <Region prefHeight="17.0" prefWidth="210.0" />
-                        <Label text="Files on server:" />
-                        <ListView fx:id="lv_filesOnServer" prefHeight="200.0" prefWidth="184.0" />
-                        <Button fx:id="btn_showVersionFile" mnemonicParsing="false" onAction="#btn_showVersionFile_OnClick" prefWidth="214.0" text="Show file versions" />
-                        <Button fx:id="btn_removeFileFromServer" mnemonicParsing="false" onAction="#btn_removeSelectedFileFromServer_OnClick" prefWidth="214.0" text="Remove selected file" />
-                     </children>
-                  </VBox>
-                  <VBox alignment="CENTER" layoutX="10.0" layoutY="10.0" prefHeight="336.0" prefWidth="212.0">
-                     <children>
-                        <HBox prefHeight="15.0" prefWidth="212.0">
-                           <children>
-                              <Label prefHeight="6.0" prefWidth="50.0" text="FIle name:" />
-                              <Region prefHeight="26.0" prefWidth="8.0" />
-                              <Label fx:id="lb_fileName" prefHeight="7.0" prefWidth="103.0" text="..." />
-                           </children>
-                        </HBox>
-                        <Label text="File versions:" />
-                        <ListView fx:id="lv_fileVersions" prefHeight="200.0" prefWidth="142.0" />
-                        <Button fx:id="btn_restoreSelectedFileVersion" mnemonicParsing="false" onAction="#btn_restoreSelectedFileVersion_OnClick" prefWidth="214.0" text="Restore selected file version" />
-                        <Button fx:id="btn_removeFileVersion" mnemonicParsing="false" onAction="#btn_removeFileVersion_OnClick" prefWidth="214.0" text="Remove selected file version" />
-                     </children>
-                  </VBox>
-               </children>
-            </HBox>
-         </right>
-         <center>
-            <VBox alignment="TOP_CENTER" prefHeight="336.0" prefWidth="149.0" BorderPane.alignment="CENTER">
-               <children>
-                  <Region prefHeight="40.0" prefWidth="145.0" />
-                  <Label text="User" />
-                  <Label fx:id="lb_username" text="username">
-                     <font>
-                        <Font size="15.0" />
-                     </font>
-                  </Label>
-                  <Region prefHeight="30.0" prefWidth="199.0" />
-                  <Button fx:id="btn_backupAll" mnemonicParsing="false" onAction="#btn_backupAll_OnClick" prefHeight="40.0" prefWidth="145.0" text="Buckup all files" />
-                  <Button fx:id="btn_backupOnlySelected" mnemonicParsing="false" onAction="#btn_backupOnlySelected_OnClick" prefHeight="33.0" prefWidth="147.0" text="Backup only selected one" textOverrun="WORD_ELLIPSIS" />
-               </children>
-            </VBox>
-         </center>
-         <bottom>
-            <HBox alignment="CENTER_RIGHT" prefHeight="60.0" prefWidth="800.0" BorderPane.alignment="CENTER">
-               <children>
-                  <VBox>
-                     <children>
-                        <HBox alignment="CENTER_LEFT" prefHeight="48.0" prefWidth="340.0">
-                           <children>
-                              <Label text="Sending file:" />
-                              <Label fx:id="lb_statistics_number" prefHeight="16.0" prefWidth="37.0" text="..." />
-                              <Region prefHeight="30.0" prefWidth="101.0" />
-                              <Label text="File sending progress:" />
-                              <Label fx:id="lb_statistics_percent" text="..." />
-                           </children>
-                        </HBox>
-                        <HBox alignment="CENTER_LEFT" layoutX="10.0" layoutY="10.0" prefHeight="48.0" prefWidth="340.0">
-                           <children>
-                              <Region prefHeight="30.0" prefWidth="199.0" />
-                              <Label prefHeight="16.0" prefWidth="111.0" text="File restoring progress:" />
-                              <Label fx:id="lb_statistics_percentRestoring" text="..." />
-                           </children>
-                        </HBox>
-                     </children>
-                  </VBox>
-                  <Region prefHeight="55.0" prefWidth="129.0" />
-                  <Button fx:id="btn_minimize" contentDisplay="CENTER" mnemonicParsing="false" onAction="#btn_minimize_OnClick" prefHeight="24.0" prefWidth="127.0" text="Minimize" />
-                  <Region prefHeight="48.0" prefWidth="28.0" />
-                <Button fx:id="btn_quit" mnemonicParsing="false" onAction="#btn_quit_OnClick" prefHeight="24.0" prefWidth="112.0" text="Quit" />
-                  <Region prefHeight="48.0" prefWidth="28.0" />
-               </children>
-            </HBox>
-         </bottom>
-      </BorderPane>
-   </children>
-</AnchorPane>
+<?import javafx.scene.layout.StackPane?>
+<StackPane prefHeight="400.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1" fx:controller="main.view.AppController">
+    <children>
+        <AnchorPane prefHeight="400.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1">
+           <children>
+              <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="800.0">
+                 <top>
+                    <MenuBar BorderPane.alignment="CENTER">
+                      <menus>
+                        <Menu mnemonicParsing="false" text="Settings">
+                          <items>
+                            <MenuItem fx:id="mi_autocomplete" mnemonicParsing="false" onAction="#mi_autocomplete_OnClick" text="Disable autocomplete" />
+                                <MenuItem fx:id="mi_deleteProfile" mnemonicParsing="false" onAction="#mi_deleteProfile_OnClick" text="Delete profile" />
+                          </items>
+                        </Menu>
+                        <Menu mnemonicParsing="false" text="Help">
+                          <items>
+                            <MenuItem fx:id="mi_about" mnemonicParsing="false" onAction="#mi_about_OnClick" text="About" />
+                          </items>
+                        </Menu>
+                      </menus>
+                    </MenuBar>
+                 </top>
+                 <left>
+                    <VBox alignment="CENTER" prefHeight="336.0" prefWidth="233.0" BorderPane.alignment="CENTER">
+                       <children>
+                          <Region prefHeight="40.0" prefWidth="233.0" />
+                          <Label text="Files to archive" />
+                          <ListView fx:id="lv_filesToArchive" prefHeight="204.0" prefWidth="233.0" />
+                          <Button fx:id="btn_addFile" mnemonicParsing="false" onAction="#btn_addFile_OnClick" prefHeight="24.0" prefWidth="262.0" text="Add file" />
+                          <Button fx:id="btn_removeFile" mnemonicParsing="false" onAction="#btn_removeSelectedFile_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove selected file" />
+                          <Button fx:id="btn_removeAllFiles" mnemonicParsing="false" onAction="#btn_removeAllFiles_OnClick" prefHeight="24.0" prefWidth="289.0" text="Remove all files" />
+                          <Region prefHeight="32.0" prefWidth="233.0" />
+                       </children>
+                    </VBox>
+                 </left>
+                 <right>
+                    <HBox BorderPane.alignment="CENTER">
+                       <children>
+                          <VBox alignment="CENTER" prefHeight="336.0" prefWidth="210.0">
+                             <children>
+                                <Region prefHeight="17.0" prefWidth="210.0" />
+                                <Label text="Files on server:" />
+                                <ListView fx:id="lv_filesOnServer" prefHeight="211.0" prefWidth="210.0" />
+                                <Button fx:id="btn_showVersionFile" mnemonicParsing="false" onAction="#btn_showVersionFile_OnClick" prefWidth="214.0" text="Show file versions" />
+                                <Button fx:id="btn_removeFileFromServer" mnemonicParsing="false" onAction="#btn_removeSelectedFileFromServer_OnClick" prefWidth="214.0" text="Remove selected file" />
+                             </children>
+                          </VBox>
+                          <VBox alignment="CENTER" layoutX="10.0" layoutY="10.0" prefHeight="336.0" prefWidth="212.0">
+                             <children>
+                                <Region prefHeight="3.0" prefWidth="212.0" />
+                                <HBox prefHeight="15.0" prefWidth="212.0">
+                                   <children>
+                                      <Label prefHeight="6.0" prefWidth="50.0" text="FIle name:" />
+                                      <Region prefHeight="26.0" prefWidth="8.0" />
+                                      <Label fx:id="lb_fileName" prefHeight="7.0" prefWidth="103.0" text="..." />
+                                   </children>
+                                </HBox>
+                                <Label text="File versions:" />
+                                <ListView fx:id="lv_fileVersions" prefHeight="210.0" prefWidth="212.0" />
+                                <Button fx:id="btn_restoreSelectedFileVersion" mnemonicParsing="false" onAction="#btn_restoreSelectedFileVersion_OnClick" prefWidth="214.0" text="Restore selected file version" />
+                                <Button fx:id="btn_removeFileVersion" mnemonicParsing="false" onAction="#btn_removeFileVersion_OnClick" prefWidth="214.0" text="Remove selected file version" />
+                             </children>
+                          </VBox>
+                       </children>
+                    </HBox>
+                 </right>
+                 <center>
+                    <VBox alignment="TOP_CENTER" prefHeight="336.0" prefWidth="149.0" BorderPane.alignment="CENTER">
+                       <children>
+                          <Region prefHeight="40.0" prefWidth="145.0" />
+                          <Label text="User" />
+                          <Label fx:id="lb_username" text="username">
+                             <font>
+                                <Font size="15.0" />
+                             </font>
+                          </Label>
+                          <Region prefHeight="30.0" prefWidth="199.0" />
+                          <Button fx:id="btn_backupAll" mnemonicParsing="false" onAction="#btn_backupAll_OnClick" prefHeight="40.0" prefWidth="145.0" text="Buckup all files" />
+                          <Button fx:id="btn_backupOnlySelected" mnemonicParsing="false" onAction="#btn_backupOnlySelected_OnClick" prefHeight="33.0" prefWidth="147.0" text="Backup only selected one" textOverrun="WORD_ELLIPSIS" />
+                       </children>
+                    </VBox>
+                 </center>
+                 <bottom>
+                    <AnchorPane prefHeight="61.0" prefWidth="801.0">
+                       <children>
+                          <Button fx:id="btn_minimize" contentDisplay="CENTER" layoutX="515.0" layoutY="23.0" mnemonicParsing="false" onAction="#btn_minimize_OnClick" prefHeight="24.0" prefWidth="127.0" text="Minimize" />
+                        <Button fx:id="btn_quit" layoutX="649.0" layoutY="23.0" mnemonicParsing="false" onAction="#btn_quit_OnClick" prefHeight="24.0" prefWidth="128.0" text="Quit" />
+                          <Line endX="400.0" layoutX="400.0" startX="-400.0" />
+                          <Label fx:id="lb_filePath" layoutX="119.0" layoutY="38.0" text="Label" />
+                          <Label fx:id="lb_progressType" layoutX="27.0" layoutY="14.0" text="Restoring version:" />
+                          <ProgressBar fx:id="progressBar" layoutX="119.0" layoutY="14.0" prefHeight="17.0" prefWidth="205.0" progress="0.0" />
+                          <ProgressIndicator fx:id="progressIndicator" layoutX="335.0" layoutY="13.0" prefHeight="37.0" prefWidth="27.0" progress="0.0" />
+                          <Label fx:id="lb_copying" layoutX="27.0" layoutY="39.0" text="Copying:" />
+                       </children>
+                    </AnchorPane>
+                 </bottom>
+              </BorderPane>
+           </children>
+        </AnchorPane>
+    </children>
+</StackPane>

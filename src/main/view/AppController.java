@@ -15,7 +15,6 @@ import main.config.GlobalConfig;
 import main.config.UserConfig;
 import main.user.User;
 
-import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -25,7 +24,7 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 
 /**
- * Created by rkossowski on 18.11.2017.
+ * Created by kkossowski on 18.11.2017.
  */
 public class AppController implements Initializable{
 
@@ -35,11 +34,15 @@ public class AppController implements Initializable{
     @FXML
     private Label lb_fileName;
     @FXML
-    private Label lb_statistics_number;
+    private Label lb_filePath;
     @FXML
-    private Label lb_statistics_percent;
+    private Label lb_progressType;
     @FXML
-    private Label lb_statistics_percentRestoring;
+    private Label lb_copying;
+    @FXML
+    private ProgressBar progressBar;
+    @FXML
+    private ProgressIndicator progressIndicator;
 
     @FXML
     private ListView<File> lv_filesToArchive;
@@ -60,7 +63,7 @@ public class AppController implements Initializable{
 
 
 
-    //----------------------FXML Methodes
+    //----------------------FXML Methods
     /**
      * Metoda inicjalizuje wszystkie pola:
      * 1) wpisuje zalogowane użytkownika w miejsce username
@@ -70,27 +73,47 @@ public class AppController implements Initializable{
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        lb_username.setText(user.getUsername());
+        System.out.println("okol");
+//        //set user name
+//        lb_username.setText(user.getUsername());
+//
+//        //load all files that user backed up on last session
+//        filesToArchive.addAll(user.getUserFilesToArchive());
+//        //set list to view
+//        lv_filesToArchive.setItems(filesToArchive);
+//        lv_filesToArchive.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+//
+//        //load files from server side
+//        filesOnServer.addAll(user.getServerHandler().getBackupFilesListFromServer());
+//        //set list to view
+//        lv_filesOnServer.setItems(filesOnServer);
+//        lv_filesOnServer.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+//
+//        //set last list to view
+//        lv_fileVersions.setItems(fileVersions);
+//        lv_fileVersions.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+//
+//        //turn on or off menuItem with autocomplete based on user flag
+//        if(!user.isAutoCompleteOn())
+//            mi_autocomplete.setDisable(false);
+//
+//        //hide progress statistics
+//        hideProgressStatistics();
+    }
 
-        //load all files that user archivate on last session
-        filesToArchive.addAll(user.getUserFilesToArchive());
-        //set list to view
-        lv_filesToArchive.setItems(filesToArchive);
-        lv_filesToArchive.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-
-        //load files from server side
-        filesOnServer.addAll(user.getServerHandler().getBackupFilesListFromServer());
-        //set list to view
-        lv_filesOnServer.setItems(filesOnServer);
-        lv_filesOnServer.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-
-        //set last list to view
-        lv_fileVersions.setItems(fileVersions);
-        lv_fileVersions.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-
-        //turn on or off menuItem with autocomplete based on user flag
-        if(!user.isAutoCompleteOn())
-            mi_autocomplete.setDisable(false);
+    private void showProgressStatistics() {
+        lb_filePath.setVisible(true);
+        lb_progressType.setVisible(true);
+        lb_copying.setVisible(true);
+        progressBar.setVisible(true);
+        progressIndicator.setVisible(true);
+    }
+    private void hideProgressStatistics(){
+        lb_filePath.setVisible(false);
+        lb_progressType.setVisible(false);
+        lb_copying.setVisible(false);
+        progressBar.setVisible(false);
+        progressIndicator.setVisible(false);
     }
 
     @FXML
@@ -444,7 +467,7 @@ public class AppController implements Initializable{
     }
 
 
-    //-----------------------Other Methodes
+    //-----------------------Other Methods
     /**
      * Metoda, dzięki której jesteśmy w stanie przekazać obecnego użytkownika do aplikacji
      */
@@ -453,7 +476,7 @@ public class AppController implements Initializable{
     }
 
 
-    //-----------------------Dialog Methodes
+    //-----------------------Dialog Methods
     public void showInformationDialog(String title, String content){
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
@@ -504,15 +527,15 @@ public class AppController implements Initializable{
         }
     }
 
-    //-----------------------Public Methodes
+    //-----------------------Public Methods
     public void setStatisticLabelWithNumber(int currentNumber, int finalNumber){
-        lb_statistics_number.setText(currentNumber + "/" + finalNumber);
+        //lb_statistics_number.setText(currentNumber + "/" + finalNumber);
     }
     public void setStatisticLabelWithPercent(int percentValue){
-        lb_statistics_percent.setText(percentValue + "%");
+        //lb_statistics_percent.setText(percentValue + "%");
     }
     public void setStatisticLabelWithPercentRestoring(int percentValue){
-        lb_statistics_percentRestoring.setText(percentValue + "%");
+        //lb_statistics_percentRestoring.setText(percentValue + "%");
     }
 
     public void addFileOnServerList(File newFile){

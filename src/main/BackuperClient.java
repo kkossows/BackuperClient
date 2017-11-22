@@ -1,7 +1,6 @@
 package main;
 import javafx.application.Application;
 import main.config.ConfigDataManager;
-import main.config.GlobalConfig;
 import main.view.ClientApplication;
 
 public class BackuperClient {
