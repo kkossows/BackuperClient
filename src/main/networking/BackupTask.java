@@ -58,10 +58,11 @@ public class BackupTask extends Task<Boolean> {
                         out.println(getVersionOfFile(file));
                         if (in.readLine().equals(ServerMessage.GET_FILE_SIZE.name())) {
                             out.println(fileSize);
-                            if (in.readLine().equals(ServerMessage.GET_FILE_CONTENT.name())) {
+                            String message = in.readLine();
+                            if (message.equals(ServerMessage.GET_FILE_CONTENT.name())) {
                                 sendFile = true;
                             }
-                            else if (in.readLine().equals(ServerMessage.FILE_VERSION_EXISTS.name())){
+                            else if (message.equals(ServerMessage.FILE_VERSION_EXISTS.name())){
                                 sendFile = false;
                             }
                         }

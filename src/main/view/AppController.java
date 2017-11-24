@@ -5,11 +5,14 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -55,6 +58,10 @@ public class AppController implements Initializable {
     private ProgressBar progressBar;
     @FXML
     private ProgressIndicator progressIndicator;
+    @FXML
+    private ProgressIndicator progress_versions;
+    @FXML
+    private Button btn_showVersionFile;
 
     @FXML
     private ListView<File> lv_filesToArchive;
@@ -79,6 +86,9 @@ public class AppController implements Initializable {
     //----------------------Other Variables
     private User user;
 
+    //--------------Mouse event
+    private double xOffset;
+    private double yOffset;
 
     //----------------------FXML Methods
 
@@ -96,33 +106,62 @@ public class AppController implements Initializable {
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        //set user name
-        lb_username.setText(user.getUsername());
+        if ((getClass().getResource("/fxml/Waiting.fxml")).toString().contains(location.getPath())) {
+            //initialize is called when controller needs to load file
+            //waiting scene has the same controller so it calls initialize method
+            //we do not want to do this, that is why if statement was made
 
-        //load all files that user backed up on last session
-        filesToArchive.addAll(user.getUserFilesToArchive());
-        //set list to view
-        lv_filesToArchive.setItems(filesToArchive);
-        lv_filesToArchive.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        } else{
+            //set user name
+            lb_username.setText(user.getUsername());
 
-        //load files from server side
-        filesOnServer.addAll(user.getServerHandler().getBackupFilesListFromServer());
-        //set list to view
-        lv_filesOnServer.setItems(filesOnServer);
-        lv_filesOnServer.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+            //load all files that user backed up on last session
+            filesToArchive.addAll(user.getUserFilesToArchive());
+            //set list to view
+            lv_filesToArchive.setItems(filesToArchive);
+            lv_filesToArchive.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
-        //set last list to view
-        lv_fileVersions.setItems(fileVersions);
-        lv_fileVersions.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+            //load files from server side
+            filesOnServer.addAll(user.getServerHandler().getBackupFilesListFromServer());
+            //set list to view
+            lv_filesOnServer.setItems(filesOnServer);
+            lv_filesOnServer.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
-        //turn on or off menuItem with autocomplete based on user flag
-        if (!user.isAutoCompleteOn())
-            mi_autocomplete.setDisable(false);
+            //set last list to view
+            lv_fileVersions.setItems(fileVersions);
+            lv_fileVersions.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
-        //hide progress statistics
-        hideProgressStatistics();
+            //turn on or off menuItem with autocomplete based on user flag
+            if (!user.isAutoCompleteOn())
+                mi_autocomplete.setDisable(false);
+
+            //hide progress statistics
+            hideProgressStatistics();
+
+            //hide progress
+            progress_versions.setDisable(true);
+            progress_versions.setVisible(false);
+        }
     }
 
+
+    public void makeDraggable(Scene scene, Stage stage) {
+        scene.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent mouseEvent) {
+                // record a delta distance for the drag and drop operation.
+                xOffset = stage.getX() - mouseEvent.getSceneX();
+                yOffset = stage.getY() - mouseEvent.getSceneY();
+            }
+        });
+        scene.setOnMouseReleased(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent mouseEvent) {
+                stage.setX(mouseEvent.getSceneX() + xOffset);
+                stage.setY(mouseEvent.getSceneY() + yOffset);
+            }
+        });
+    }
 
     private void showProgressStatistics() {
         lb_filePath.setVisible(true);
@@ -132,7 +171,9 @@ public class AppController implements Initializable {
         progressIndicator.setVisible(true);
 
         //clear
+        progressBar.progressProperty().unbind();
         progressBar.setProgress(0);
+        progressIndicator.progressProperty().unbind();
         progressIndicator.setProgress(0);
     }
     private void hideProgressStatistics() {
@@ -142,7 +183,6 @@ public class AppController implements Initializable {
         progressBar.setVisible(false);
         progressIndicator.setVisible(false);
     }
-
 
     @FXML
     public void btn_addFile_OnClick(ActionEvent event) {
@@ -215,10 +255,6 @@ public class AppController implements Initializable {
         //define what happen after task finished with no error
         backupTask.setOnSucceeded(e ->{
             if(backupTask.getValue()){
-                progressBar.progressProperty().unbind();
-                progressIndicator.progressProperty().unbind();
-                lb_filePath.textProperty().unbind();
-
                 showInformationDialog(
                         "All files sent.",
                         "Backup complete."
@@ -226,8 +262,11 @@ public class AppController implements Initializable {
             }
         });
         //bind variables
+        progressBar.progressProperty().unbind();
         progressBar.progressProperty().bind(backupTask.progressProperty());
+        progressIndicator.progressProperty().unbind();
         progressIndicator.progressProperty().bind(backupTask.progressProperty());
+        lb_filePath.textProperty().unbind();
         lb_filePath.textProperty().bind(backupTask.messageProperty());
 
         //set statistics title
@@ -247,40 +286,52 @@ public class AppController implements Initializable {
         //verify whether user select any file
         final int indexOfSelectedFile = lv_filesOnServer.getSelectionModel().getSelectedIndex();
 
-        //declare tasks
-        Task<ArrayList<String>> showVersionTask = new Task<ArrayList<String>>() {
-            @Override
-            protected ArrayList<String> call() throws Exception {
-                if (indexOfSelectedFile > -1) {
+        if(indexOfSelectedFile != -1){
+            //disable showVersion button until one download finished
+            btn_showVersionFile.setDisable(true);
+            btn_showVersionFile.setVisible(false);
+
+            //show progress ring
+            progress_versions.setDisable(false);
+
+            //set file name label
+            lb_fileName.setText(filesOnServer.get(indexOfSelectedFile).getAbsolutePath());
+
+            //declare tasks
+            Task<ArrayList<String>> showVersionTask = new Task<ArrayList<String>>() {
+                @Override
+                protected ArrayList<String> call() throws Exception {
                     //get selected file indexOfSelectedFile and find it in arraylist to get require file
                     File selectedFile = filesOnServer.get(indexOfSelectedFile);
 
                     //return received list from server
                     return user.getServerHandler().getAllFileVersionsFromServer(selectedFile);
-                } else {
-                    return null;
                 }
-            }
-        };
-        //define what happen after task finished with no error
-        showVersionTask.setOnSucceeded(e -> {
-            if (showVersionTask.getValue() != null) {
+            };
+            //define what happen after task finished with no error
+            showVersionTask.setOnSucceeded(e -> {
                 //add hole list to observable list
                 fileVersions.addAll(showVersionTask.getValue());
 
-                //set file name label
-                lb_fileName.setText(filesOnServer.get(indexOfSelectedFile).getAbsolutePath());
-            } else {
-                showWarningDialog(
-                        "Error",
-                        "No file selected. Please first select the file and press button again."
-                );
-            }
-        });
-        //run task
-        Thread showVersionThread = new Thread(showVersionTask);
-        showVersionThread.setDaemon(true);
-        showVersionThread.start();
+
+                //hide progress
+                progress_versions.setDisable(true);
+
+                //unlock buttons
+                btn_showVersionFile.setDisable(false);
+                btn_showVersionFile.setVisible(true);
+            });
+            //run task
+            Thread showVersionThread = new Thread(showVersionTask);
+            showVersionThread.setDaemon(true);
+            showVersionThread.start();
+
+        } else {
+            showWarningDialog(
+                    "Error",
+                    "No file selected. Please first select the file and press button again."
+            );
+        }
     }
     @FXML
     public void btn_removeSelectedFileFromServer_OnClick() {
@@ -418,8 +469,11 @@ public class AppController implements Initializable {
                     backupFile, backupFilePath, backupFileVersion
             );
             //bind variables
+            progressBar.progressProperty().unbind();
             progressBar.progressProperty().bind(restoringTask.progressProperty());
+            progressIndicator.progressProperty().unbind();
             progressIndicator.progressProperty().bind(restoringTask.progressProperty());
+            lb_filePath.textProperty().unbind();
             lb_filePath.textProperty().bind(restoringTask.messageProperty());
 
             //set statistics title
@@ -431,9 +485,6 @@ public class AppController implements Initializable {
             //define what happen after task finished with no error
             restoringTask.setOnSucceeded(e -> {
                 if (restoringTask.getValue()) {
-                    progressBar.progressProperty().unbind();
-                    progressIndicator.progressProperty().unbind();
-                    lb_filePath.textProperty().unbind();
 
                     showInformationDialog(
                             "Restoring file finished.",
@@ -524,11 +575,15 @@ public class AppController implements Initializable {
     }
     @FXML
     public void btn_quit_OnClick(){
+        //show waiting screen
+        showWaitingScene();
 
         //declare tasks
         Task<Boolean> logoutTask = new Task<Boolean>() {
             @Override
             protected Boolean call() throws Exception {
+                updateMessage("LOGOUT PROCEDURE. Please wait...");
+
                 //logout user
                 boolean isSucceeded = user.getServerHandler().logoutUser();
 
@@ -545,21 +600,12 @@ public class AppController implements Initializable {
                     newUserConfig.setUserFilesToArchive(filesToArchive);
                     ConfigDataManager.createUserConfig(newUserConfig);
 
-                    //some visial efects
-                    Thread.sleep(300);
+                    //some visual effects
+                    Thread.sleep(4000);
                 }
                 return isSucceeded;
             }
         };
-        //set name
-        lb_waitingPaneLabel.setText("LOGOUT PROCEDURE. Please wait...");
-
-        //bind label
-        lb_waitingPaneLabel.textProperty().bind(logoutTask.messageProperty());
-
-        //show waiting screen
-        showWaitingScene();
-
         //define what happen after task finished with no error
         logoutTask.setOnSucceeded(e -> {
             if (logoutTask.getValue())
@@ -568,6 +614,10 @@ public class AppController implements Initializable {
                 Platform.exit();
             }
         });
+        //bind label
+        lb_waitingPaneLabel.textProperty().unbind();
+        lb_waitingPaneLabel.textProperty().bind(logoutTask.messageProperty());
+
         //run task
         Thread logoutThread = new Thread(logoutTask);
         logoutThread.setDaemon(true);
@@ -602,9 +652,14 @@ public class AppController implements Initializable {
 
         //deleting also logout on server side
         if(isConfirmed){
+            //show waiting screen
+            showWaitingScene();
+
             Task<Boolean> deleteProfile = new Task<Boolean>() {
                 @Override
                 protected Boolean call() throws Exception {
+                    updateMessage("DELETING PROCESS - Please wait...");
+
                     boolean isSucceeded = user.getServerHandler().deleteUser();
                     if (isSucceeded){
                         //update view label
@@ -635,14 +690,9 @@ public class AppController implements Initializable {
                     Platform.exit();
                 }
             });
-            //set prompt text
-            lb_waitingPaneLabel.setText("DELETING PROCESS - Please wait...");
-
             //bind label
+            lb_waitingPaneLabel.textProperty().unbind();
             lb_waitingPaneLabel.textProperty().bind(deleteProfile.messageProperty());
-
-            //show waiting screen
-            showWaitingScene();
 
             //run task in new thread
             Thread deleteThread = new Thread(deleteProfile);
@@ -660,7 +710,6 @@ public class AppController implements Initializable {
                 "Version: 1.0\n More information in user manual."
         );
     }
-
 
 
     private void showWaitingScene(){
@@ -702,16 +751,18 @@ public class AppController implements Initializable {
 
 
     //-----------------------Dialog Methods
-    public void showInformationDialog(String title, String content){
+    public void showInformationDialog(String header, String content){
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
+        alert.setTitle("INFORMATION");
+        alert.setHeaderText(header);
         alert.setContentText(content);
 
         alert.showAndWait();
     }
-    private void showWarningDialog(String title, String content){
+    private void showWarningDialog(String header, String content){
         Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
+        alert.setTitle("WARNING");
+        alert.setHeaderText(header);
         alert.setContentText(content);
 
         alert.showAndWait();

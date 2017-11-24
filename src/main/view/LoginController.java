@@ -3,12 +3,14 @@ package main.view;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import main.config.ConfigDataManager;
@@ -16,6 +18,7 @@ import main.config.GlobalConfig;
 import main.config.Properties;
 import main.networking.ServerHandler;
 import main.user.User;
+
 
 import java.io.IOException;
 import java.net.URL;
@@ -51,6 +54,11 @@ public class LoginController implements Initializable{
     //-------------Other variables
     private boolean isServerOnline = false;
 
+    //--------------Mouse event
+    private double xOffset;
+    private double yOffset;
+
+
     //-------------FXML Methods
     /**
      * Method responsible for initiating login scene.
@@ -62,22 +70,46 @@ public class LoginController implements Initializable{
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        if (!ConfigDataManager.isGlobalConfigFileExists()) {
-            ConfigDataManager.createGlobalConfig(new GlobalConfig());
-        }
+        if ((getClass().getResource("/fxml/Waiting.fxml")).toString().contains(location.getPath())) {
+            //initialize is called when controller needs to load file
+            //waiting scene has the same controller so it calls initialize method
+            //we do not want to do this, that is why if statement was made
 
-        GlobalConfig globalConfig = ConfigDataManager.readGlobalConfig();
-        if (globalConfig.isUserRemembered()) {
-            tx_serverIp.setText(globalConfig.getSavedServerIpAddress());
-            tx_serverPort.setText(Integer.toString(globalConfig.getSavedServerPortNumber()));
-            tx_username.setText(globalConfig.getSavedUsername());
-            tx_password.setText(globalConfig.getSavedPassword());
-            cbox_remember.setSelected(true);
         } else {
-            tx_serverIp.setText(globalConfig.getDefaultServerIpAddress());
-            tx_serverPort.setText(Integer.toString(globalConfig.getDefaultServerPortNumber()));
+            if (!ConfigDataManager.isGlobalConfigFileExists()) {
+                ConfigDataManager.createGlobalConfig(new GlobalConfig());
+            }
+
+            GlobalConfig globalConfig = ConfigDataManager.readGlobalConfig();
+            if (globalConfig.isUserRemembered()) {
+                tx_serverIp.setText(globalConfig.getSavedServerIpAddress());
+                tx_serverPort.setText(Integer.toString(globalConfig.getSavedServerPortNumber()));
+                tx_username.setText(globalConfig.getSavedUsername());
+                tx_password.setText(globalConfig.getSavedPassword());
+                cbox_remember.setSelected(true);
+            } else {
+                tx_serverIp.setText(globalConfig.getDefaultServerIpAddress());
+                tx_serverPort.setText(Integer.toString(globalConfig.getDefaultServerPortNumber()));
+            }
         }
     }
+
+    public void makeDraggable(Scene scene, Stage stage){
+        scene.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent mouseEvent) {
+                // record a delta distance for the drag and drop operation.
+                xOffset = stage.getX() - mouseEvent.getSceneX();
+                yOffset = stage.getY() - mouseEvent.getSceneY();
+            }
+        });
+        scene.setOnMouseReleased(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent mouseEvent) {
+                stage.setX(mouseEvent.getSceneX() + xOffset);
+                stage.setY(mouseEvent.getSceneY() + yOffset);
+            }
+        });
+    }
+
     /**
      * Method responsible for the login process.
      * Steps:
@@ -96,102 +128,139 @@ public class LoginController implements Initializable{
      */
     @FXML
     void btn_login_onClick(ActionEvent event) {
-        //new version with Task (no gui frozen)
-        isServerOnline = checkIfServerIsOnline();
+        if (tx_serverIp.getText().trim().isEmpty() || tx_serverPort.getText().trim().isEmpty()
+                || tx_username.getText().trim().isEmpty() || tx_username.getText().trim().isEmpty()) {
 
-        if(isServerOnline){
+            showWarningDialog(
+                    "MISSING VALUES",
+                    "Please, enter all values first."
+            );
+        }
+        else {
+
             //declare tasks
-            Task<Boolean> loginTask = new Task<Boolean>() {
+            Task<User> loginTask = new Task<User>() {
                 @Override
-                protected Boolean call() throws Exception {
-                    ServerHandler serverHandler = new ServerHandler();
-                    boolean authenticationSuccess;
-                    authenticationSuccess = serverHandler.authenticateUser(
-                            tx_username.getText().trim(),
-                            tx_password.getText().trim()
-                    );
+                protected User call() throws Exception {
+                    updateMessage("LOGIN PROCESS - Please wait...");
+                    User currentUser = null;
 
-                    if(authenticationSuccess) {
-                        //update message
-                        updateMessage("LOGIN SUCCEEDED - Loading application view. Please wait...");
+                    isServerOnline = checkIfServerIsOnline();
+                    if (isServerOnline) {
 
+                        ServerHandler serverHandler = new ServerHandler();
+                        boolean authenticationSuccess = serverHandler.authenticateUser(
+                                tx_username.getText().trim(),
+                                tx_password.getText().trim()
+                        );
 
-                        //create logged in user
-                        //user needs only username and serverHandler object with connected socket
-                        User currentUser = new User(tx_username.getText(), serverHandler);
+                        if (authenticationSuccess) {
+                            //update message
+                            updateMessage("LOGIN SUCCEEDED - Loading application view. Please wait...");
 
-                        //add user to main application controller
-                        AppController appController = new AppController();
-                        appController.setUser(currentUser);
+                            //create logged in user
+                            //user needs only username and serverHandler object with connected socket
+                            currentUser = new User(tx_username.getText(), serverHandler);
 
-                        //update configuration files
-                        if (cbox_remember.isSelected()) {
-                            GlobalConfig newGlobalConfig = new GlobalConfig();
+                            //update configuration files
+                            if (cbox_remember.isSelected()) {
+                                GlobalConfig newGlobalConfig = new GlobalConfig();
 
-                            newGlobalConfig.setDefaultServerIpAddress(Properties.defaultServerIpAddress);
-                            newGlobalConfig.setDefaultServerPortNumber(Properties.defaultServerPortNumber);
+                                newGlobalConfig.setDefaultServerIpAddress(Properties.defaultServerIpAddress);
+                                newGlobalConfig.setDefaultServerPortNumber(Properties.defaultServerPortNumber);
 
-                            newGlobalConfig.setSavedServerIpAddress(tx_serverIp.getText());
-                            newGlobalConfig.setSavedServerPortNumber(Integer.getInteger(tx_serverPort.getText()));
-                            newGlobalConfig.setSavedUsername(tx_username.getText());
-                            newGlobalConfig.setSavedPassword(tx_password.getText());
+                                newGlobalConfig.setSavedServerIpAddress(tx_serverIp.getText());
+                                newGlobalConfig.setSavedServerPortNumber(Integer.parseInt(tx_serverPort.getText().trim()));
+                                newGlobalConfig.setSavedUsername(tx_username.getText());
+                                newGlobalConfig.setSavedPassword(tx_password.getText());
 
-                            ConfigDataManager.createGlobalConfig(newGlobalConfig);
+                                ConfigDataManager.createGlobalConfig(newGlobalConfig);
 
-                            //update user flag
-                            currentUser.setAutoCompleteOn(true);
+                                //update user flag
+                                currentUser.setAutoCompleteOn(true);
+                            }
+                            else {
+                                //verify whether user is saved in globalConfig file - if true, set user flag
+                                GlobalConfig globalConfig = ConfigDataManager.readGlobalConfig();
+                                if (globalConfig.getSavedServerIpAddress().equals(tx_serverIp.getText())
+                                        && globalConfig.getSavedServerPortNumber() == Integer.parseInt(tx_serverPort.getText().trim())
+                                        && globalConfig.getSavedUsername().equals(tx_username.getText())
+                                        && globalConfig.getSavedPassword().equals(tx_password.getText())) {
+                                    currentUser.setAutoCompleteOn(true);
+                                }
+                            }
+
+                            //switching stages is make in loginTask.OnSucceeded method
+                            //some visual effects
+                            try {
+                                Thread.sleep(3000);
+                            } catch (InterruptedException e1) {
+                                e1.printStackTrace();
+                            }
                         }
-
-                        //verify whether user is saved in globalConfig file - if true, set user flag
-                        GlobalConfig globalConfig = ConfigDataManager.readGlobalConfig();
-                        if (globalConfig.getSavedServerIpAddress().equals(tx_serverIp.getText())
-                                && globalConfig.getSavedServerPortNumber() == Integer.getInteger(tx_serverPort.getText())
-                                && globalConfig.getSavedUsername().equals(tx_username.getText())
-                                && globalConfig.getSavedPassword().equals(tx_password.getText())) {
-                            currentUser.setAutoCompleteOn(true);
-                        }
-
-                        //switching stages is make in loginTask.OnSucceeded method
                     }
-                    return authenticationSuccess;
+                    return currentUser;
                 }
             };
             //define what happen after task finished with no error
             loginTask.setOnSucceeded(e -> {
-                if(loginTask.getValue()) {
+                ServerHandler.clearServerError();
+
+                if (loginTask.getValue() != null) {
                     //switch scenes
                     StackPane appPane = null;
+                    AppController appController = new AppController();
                     try {
                         FXMLLoader loader = new FXMLLoader();
-                        loader.setController(this);
+                        loader.setLocation(getClass().getResource("/fxml/App.fxml"));
 
-                        //load FXMLLoader mean do initialize method
-                        appPane = loader.load(getClass().getResource("/fxml/App.fxml"));
+                        //add user to main application controller
+                        appController.setUser(loginTask.getValue());
+
+                        //set controller
+                        loader.setController(appController);
+
+                        //load FXMLLoader means do initialize method
+                        appPane = loader.load();
                     } catch (IOException err) {
                         err.printStackTrace();
                     }
 
                     Scene appScene = new Scene(appPane);
                     Stage primaryStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                    appController.makeDraggable(appScene, primaryStage);
                     primaryStage.setScene(appScene);
-                }
-                else {
+                } else {
                     showWarningDialog(
                             "AUTHENTICATION ERROR",
                             "User not registered or password incorrect"
                     );
-                    deleteWaitingScene();
-                    return;
+                    hideWaitingScene();
                 }
             });
-            //set prompt text
-            lb_waitingPaneLabel.setText("LOGIN PROCESS - Please wait...");
+            loginTask.setOnFailed(e -> {
+                if (loginTask.getException() instanceof NumberFormatException) {
+                    showWarningDialog(
+                            "WRONG PORT VALUE",
+                            "Please, enter only numbers as port value."
+                    );
+                }
+                else {
+                    ServerHandler.setServerError();
+                    showInformationDialog(
+                            "SERVER OFFLINE",
+                            "Please, enter correct server variables"
+                    );
+                }
+                hideWaitingScene();
 
-            //bind label to massageProperty to change text from task
-            lb_waitingPaneLabel.textProperty().bind(loginTask.messageProperty());
-
+            });
             //show waiting screen
             showWaitingScene();
+
+            //bind label to massageProperty to change text from task
+            lb_waitingPaneLabel.textProperty().unbind();
+            lb_waitingPaneLabel.textProperty().bind(loginTask.messageProperty());
 
             //run task
             Thread loginThread = new Thread(loginTask);
@@ -210,44 +279,78 @@ public class LoginController implements Initializable{
      */
     @FXML
     void btn_register_onClick() {
-        isServerOnline = checkIfServerIsOnline();
-        //new version with Task (no gui frozen)
-        if(isServerOnline){
-            Task<Boolean> registerTask = new Task<Boolean >() {
+        if (tx_serverIp.getText().trim().isEmpty() || tx_serverPort.getText().trim().isEmpty()
+                || tx_username.getText().trim().isEmpty() || tx_username.getText().trim().isEmpty()) {
+
+            showWarningDialog(
+                    "MISSING VALUES",
+                    "Please, enter all values first."
+            );
+        }
+        else {
+            //show waiting screen
+            showWaitingScene();
+
+            Task<Boolean> registerTask = new Task<Boolean>() {
                 @Override
                 protected Boolean call() throws Exception {
-                    ServerHandler serverHandler = new ServerHandler();
-                    boolean registrationSucceeded;
-                    registrationSucceeded = serverHandler.registerUser(
-                            tx_username.getText().trim(), tx_username.getText().trim());
+                    updateMessage("REGISTRATION PROCESS - Please wait...");
 
+                    isServerOnline = checkIfServerIsOnline();
+                    boolean registrationSucceeded = false;
+                    if (isServerOnline) {
+                        ServerHandler serverHandler = new ServerHandler();
+                        registrationSucceeded = serverHandler.registerUser(
+                                tx_username.getText().trim(),
+                                tx_password.getText().trim());
+                    } else {
+                        //some visual effects
+                        Thread.sleep(200);
+                    }
                     return registrationSucceeded;
                 }
             };
             //define what happen after task finished with no error
             registerTask.setOnSucceeded(e -> {
-                if(registerTask.getValue()){
+                ServerHandler.clearServerError();
+
+                if (registerTask.getValue()) {
                     showInformationDialog(
                             "REGISTRATION SUCCEEDED",
                             "User added correctly. Please login."
                     );
-                    deleteWaitingScene();
+                    hideWaitingScene();
                     return;
-                }
-                else {
+                } else {
                     showWarningDialog(
                             "REGISTRATION ERROR",
                             "User already exists on server side."
                     );
-                    deleteWaitingScene();
+                    hideWaitingScene();
                     return;
                 }
             });
-            //set prompt text
-            lb_waitingPaneLabel.setText("REGISTRATION PROCESS - Please wait...");
+            registerTask.setOnFailed(e -> {
+                if (registerTask.getException() instanceof NumberFormatException) {
+                    showWarningDialog(
+                            "WRONG PORT VALUE",
+                            "Please, enter only numbers as port value."
+                    );
+                }
+                else {
+                    ServerHandler.setServerError();
+                    showInformationDialog(
+                            "SERVER OFFLINE",
+                            "Please, enter correct server variables"
+                    );
+                }
+                hideWaitingScene();
+            });
 
-            //show waiting screen
-            showWaitingScene();
+
+            //bind label to massageProperty to change text from task
+            lb_waitingPaneLabel.textProperty().unbind();
+            lb_waitingPaneLabel.textProperty().bind(registerTask.messageProperty());
 
             //run task
             Thread registerThread = new Thread(registerTask);
@@ -282,7 +385,7 @@ public class LoginController implements Initializable{
         //disable login pane
         loginPane.setDisable(true);
     }
-    private void deleteWaitingScene(){
+    private void hideWaitingScene(){
         //remove waiting pane
         container.getChildren().remove(waitingPane);
         //enable login pane
@@ -291,47 +394,24 @@ public class LoginController implements Initializable{
 
 
     //-------------Other Methods
-    private boolean checkIfServerIsOnline(){
-        // trim usuwa białe znaki
-        if (tx_serverIp.getText().trim().isEmpty() || tx_serverPort.getText().trim().isEmpty()
-                || tx_username.getText().trim().isEmpty() || tx_username.getText().trim().isEmpty()){
-
-            showWarningDialog("MISSING VALUES", "Please, enter all values first.");
-            return false;
-        }
-        else {
-            //trzeba sprawdzić, czy użytkownik wpisał same liczby w miejscu port
-            try {
-                isServerOnline = ServerHandler.isServerOnline(tx_serverIp.getText(), Integer.parseInt(tx_serverPort.getText()));
-            }
-            catch (NumberFormatException e) {
-                showWarningDialog("WRONG PORT VALUE", "Please, enter only numbers as port value.");
-                return false;
-            }
-
-            if (!isServerOnline){
-                showInformationDialog("SERVER OFFLINE", "Please, enter correct server variables");
-                return false;
-            }
-            else {
-                //serwer jest dostępny
-                return true;
-            }
-        }
+    private boolean checkIfServerIsOnline() throws IOException , NumberFormatException {
+        isServerOnline = ServerHandler.isServerOnline(tx_serverIp.getText(), Integer.parseInt(tx_serverPort.getText()));
+        return isServerOnline;
     }
-    private void showInformationDialog(String title, String content){
+    private void showInformationDialog(String header, String content){
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
+        alert.setTitle("INFORMATION!");
+        alert.setHeaderText(header);
         alert.setContentText(content);
 
         alert.showAndWait();
     }
-    private void showWarningDialog(String title, String content){
+    private void showWarningDialog(String header, String content){
         Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
+        alert.setTitle("WARNING!");
+        alert.setHeaderText(header);
         alert.setContentText(content);
 
         alert.showAndWait();
     }
-
 }

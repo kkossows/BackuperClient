@@ -1,6 +1,7 @@
 package main.config;
 
 import java.io.*;
+import java.util.ArrayList;
 
 /**
  * Static class for static management of configuration files
@@ -16,7 +17,7 @@ public class ConfigDataManager {
     }
 
     public static boolean isGlobalConfigFileExists(){
-        return new File(Properties.globalConfigFile).exists();
+        return new File(Properties.appDataDir + Properties.globalConfigFile).exists();
     }
     public static GlobalConfig readGlobalConfig()  {
         File globalConfigFile = new File(Properties.appDataDir + Properties.globalConfigFile);
@@ -73,6 +74,9 @@ public class ConfigDataManager {
     }
     public static void createUserConfig(UserConfig userConfig){
         File userConfigFile = new File(Properties.appDataDir + userConfig.getUsername() + ".dat");
+
+        //change array in userConfig
+        userConfig.setUserFilesToArchive(new ArrayList<File>(userConfig.getUserFilesToArchive()));
 
         if (userConfigFile.exists())
             userConfigFile.delete();

@@ -17,8 +17,11 @@ public class ClientApplication extends Application {
         /*
         Application always starts from login and register scene.
          */
-        Parent rootPane = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
+        FXMLLoader loader = new FXMLLoader();
+        loader.setLocation(getClass().getResource("/fxml/Login.fxml"));
+        Parent rootPane = loader.load();
         Scene loginScene = new Scene(rootPane);
+        ((LoginController) loader.getController()).makeDraggable(loginScene, primaryStage);
         primaryStage.initStyle(StageStyle.UNDECORATED);
         primaryStage.setScene(loginScene);
         primaryStage.show();

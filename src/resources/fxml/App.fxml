@@ -17,7 +17,7 @@
 <?import javafx.scene.shape.Line?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="400.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1" fx:controller="main.view.AppController">
+<StackPane fx:id="container" prefHeight="400.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1">
     <children>
         <AnchorPane fx:id="appPane" prefHeight="400.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1">
            <children>
@@ -74,7 +74,12 @@
                                       <Label fx:id="lb_fileName" prefHeight="7.0" prefWidth="103.0" text="..." />
                                    </children>
                                 </HBox>
-                                <Label text="File versions:" />
+                              <HBox alignment="CENTER">
+                                 <children>
+                                      <Label text="File versions:" />
+                                    <ProgressIndicator fx:id="progress_versions" prefHeight="16.0" prefWidth="31.0" />
+                                 </children>
+                              </HBox>
                                 <ListView fx:id="lv_fileVersions" prefHeight="210.0" prefWidth="212.0" />
                                 <Button fx:id="btn_restoreSelectedFileVersion" mnemonicParsing="false" onAction="#btn_restoreSelectedFileVersion_OnClick" prefWidth="214.0" text="Restore selected file version" />
                                 <Button fx:id="btn_removeFileVersion" mnemonicParsing="false" onAction="#btn_removeFileVersion_OnClick" prefWidth="214.0" text="Remove selected file version" />

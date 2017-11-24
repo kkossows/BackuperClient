@@ -10,6 +10,7 @@ public class ServerHandler {
     private static Socket socket;
     private BufferedReader in;
     private PrintWriter out;
+    private static boolean serverErrorOccurred = false;
 
 
     /**
@@ -34,14 +35,30 @@ public class ServerHandler {
      * @param serverPortNumber
      * @return Status of connection (true mean connection established)
      */
-    public static boolean isServerOnline(String serverIpAddress, int serverPortNumber){
-        try {
-            socket = new Socket(serverIpAddress, serverPortNumber);
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
+    public static boolean isServerOnline(String serverIpAddress, int serverPortNumber) throws IOException {
+        if (socket != null) {
+            if (socket.getPort() == serverPortNumber
+                    && socket.getInetAddress().getHostAddress().equals(serverIpAddress)) {
+                    if(!serverErrorOccurred) {
+                        return socket.isConnected();
+                    }
+                    socket.close();
+            }
+            socket.close();
         }
+        //if socket will not be created, it throws IOException
+        socket = new Socket(serverIpAddress, serverPortNumber);
+        return socket.isConnected();
+    }
+
+    /**
+     * Method responsible for informing ServerHandler that server closed our connection
+     */
+    public static void setServerError(){
+        serverErrorOccurred = true;
+    }
+    public static void clearServerError(){
+        serverErrorOccurred = false;
     }
     /**
      * Method responsible for the authentication process.
@@ -49,23 +66,19 @@ public class ServerHandler {
      * @param password
      * @return  Operations result (true - user exist on server and password is correct).
      */
-    public boolean authenticateUser(String username, String password) {
-        try {
-            out.println(ClientMessage.LOG_IN.name());
-            if (in.readLine().equals(ServerMessage.GET_USERNAME.name())) {
-                out.println(username);
-                if (in.readLine().equals(ServerMessage.GET_PASSWORD.name())) {
-                    out.println(password);
-                    if (in.readLine().equals(ServerMessage.LOGIN_SUCCESS.name())) {
-                        return true;
-                    } else if (in.readLine().equals(ServerMessage.LOGIN_FAILED.name())) {
-                        return false;
-                    }
+    public boolean authenticateUser(String username, String password) throws IOException {
+        out.println(ClientMessage.LOG_IN.name());
+        if (in.readLine().equals(ServerMessage.GET_USERNAME.name())) {
+            out.println(username);
+            if (in.readLine().equals(ServerMessage.GET_PASSWORD.name())) {
+                out.println(password);
+                String message = in.readLine();
+                if (message.equals(ServerMessage.LOGIN_SUCCESS.name())) {
+                    return true;
+                } else if (message.equals(ServerMessage.LOGIN_FAILED.name())) {
+                    return false;
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
         }
         return false;
     }
@@ -75,24 +88,19 @@ public class ServerHandler {
      * @param password
      * @return Operations result (true - user registered, false - user already exists on the server).
      */
-    public boolean registerUser(String username, String password) {
-        try {
-            out.println(ClientMessage.REGISTER.name());
-            if (in.readLine().equals(ServerMessage.GET_USERNAME.name())) {
-                out.println(username);
-                if (in.readLine().equals(ServerMessage.GET_PASSWORD.name())) {
-                    out.println(password);
-                    if (in.readLine().equals(ServerMessage.USER_CREATED.name())) {
-                        return true;
-                    }
-                    else if(in.readLine().equals(ServerMessage.USER_EXISTS.name())){
-                        return false;
-                    }
+    public boolean registerUser(String username, String password) throws IOException {
+        out.println(ClientMessage.REGISTER.name());
+        if (in.readLine().equals(ServerMessage.GET_USERNAME.name())) {
+            out.println(username);
+            if (in.readLine().equals(ServerMessage.GET_PASSWORD.name())) {
+                out.println(password);
+                String message = in.readLine();
+                if (message.equals(ServerMessage.USER_CREATED.name())) {
+                    return true;
+                } else if (message.equals(ServerMessage.USER_EXISTS.name())) {
+                    return false;
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
         }
         return false;
     }
@@ -108,7 +116,7 @@ public class ServerHandler {
             out.println(ClientMessage.GET_BACKUP_FILES_LIST.name());
             if (in.readLine().equals(ServerMessage.SENDING_BACKUP_FILES_LIST.name())) {
                 String nextMessageLine = in.readLine();
-                while (nextMessageLine.equals(ServerMessage.SENDING_BACKUP_FILES_LIST_FINISHED.name()))
+                while (!nextMessageLine.equals(ServerMessage.SENDING_BACKUP_FILES_LIST_FINISHED.name()))
                 {
                     backupFiles.add(new File(nextMessageLine));
                     nextMessageLine = in.readLine();
