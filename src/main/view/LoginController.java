@@ -50,7 +50,6 @@ public class LoginController implements Initializable{
     @FXML
     private Label lb_waitingPaneLabel;
 
-
     //-------------Other variables
     private boolean isServerOnline = false;
 
@@ -137,6 +136,8 @@ public class LoginController implements Initializable{
             );
         }
         else {
+            //show waiting screen
+            showWaitingScene();
 
             //declare tasks
             Task<User> loginTask = new Task<User>() {
@@ -145,10 +146,14 @@ public class LoginController implements Initializable{
                     updateMessage("LOGIN PROCESS - Please wait...");
                     User currentUser = null;
 
-                    isServerOnline = checkIfServerIsOnline();
+                    //create serverHandler and check if server is online
+                    ServerHandler serverHandler = new ServerHandler();
+                    isServerOnline = serverHandler.isServerOnline(
+                            tx_serverIp.getText(),
+                            Integer.parseInt(tx_serverPort.getText())
+                    );
                     if (isServerOnline) {
-
-                        ServerHandler serverHandler = new ServerHandler();
+                        //make authentication process
                         boolean authenticationSuccess = serverHandler.authenticateUser(
                                 tx_username.getText().trim(),
                                 tx_password.getText().trim()
@@ -193,19 +198,20 @@ public class LoginController implements Initializable{
                             //switching stages is make in loginTask.OnSucceeded method
                             //some visual effects
                             try {
-                                Thread.sleep(3000);
+                                Thread.sleep(2000);
                             } catch (InterruptedException e1) {
                                 e1.printStackTrace();
                             }
-                        }
-                    }
+                        } //authentication process failed - currentUser is set to null
+                    } //server is not online, exception will be thrown so onFailed method will inform about that
+                    //in both versions, serverHandler will be deleted so socket will be closed - no need to close it manually
+                    //(when authentication correct, serverHandler will be passed through currentUser object to AppController
+                    // so it will not be deleted)
                     return currentUser;
                 }
             };
             //define what happen after task finished with no error
             loginTask.setOnSucceeded(e -> {
-                ServerHandler.clearServerError();
-
                 if (loginTask.getValue() != null) {
                     //switch scenes
                     StackPane appPane = null;
@@ -246,17 +252,13 @@ public class LoginController implements Initializable{
                     );
                 }
                 else {
-                    ServerHandler.setServerError();
                     showInformationDialog(
                             "SERVER OFFLINE",
                             "Please, enter correct server variables"
                     );
                 }
                 hideWaitingScene();
-
             });
-            //show waiting screen
-            showWaitingScene();
 
             //bind label to massageProperty to change text from task
             lb_waitingPaneLabel.textProperty().unbind();
@@ -296,40 +298,40 @@ public class LoginController implements Initializable{
                 protected Boolean call() throws Exception {
                     updateMessage("REGISTRATION PROCESS - Please wait...");
 
-                    isServerOnline = checkIfServerIsOnline();
+                    //create serverHandler and check if server is online
+                    ServerHandler serverHandler = new ServerHandler();
+                    isServerOnline = serverHandler.isServerOnline(
+                            tx_serverIp.getText(),
+                            Integer.parseInt(tx_serverPort.getText())
+                    );
                     boolean registrationSucceeded = false;
                     if (isServerOnline) {
-                        ServerHandler serverHandler = new ServerHandler();
                         registrationSucceeded = serverHandler.registerUser(
                                 tx_username.getText().trim(),
                                 tx_password.getText().trim());
-                    } else {
-                        //some visual effects
-                        Thread.sleep(200);
                     }
+                    //always close connection after registration process
+                    serverHandler.closeConnection();
                     return registrationSucceeded;
                 }
             };
             //define what happen after task finished with no error
             registerTask.setOnSucceeded(e -> {
-                ServerHandler.clearServerError();
-
                 if (registerTask.getValue()) {
                     showInformationDialog(
                             "REGISTRATION SUCCEEDED",
                             "User added correctly. Please login."
                     );
                     hideWaitingScene();
-                    return;
                 } else {
                     showWarningDialog(
                             "REGISTRATION ERROR",
                             "User already exists on server side."
                     );
                     hideWaitingScene();
-                    return;
                 }
             });
+            //define what happen after task finished with error(s)
             registerTask.setOnFailed(e -> {
                 if (registerTask.getException() instanceof NumberFormatException) {
                     showWarningDialog(
@@ -338,7 +340,6 @@ public class LoginController implements Initializable{
                     );
                 }
                 else {
-                    ServerHandler.setServerError();
                     showInformationDialog(
                             "SERVER OFFLINE",
                             "Please, enter correct server variables"
@@ -346,7 +347,6 @@ public class LoginController implements Initializable{
                 }
                 hideWaitingScene();
             });
-
 
             //bind label to massageProperty to change text from task
             lb_waitingPaneLabel.textProperty().unbind();
@@ -392,12 +392,7 @@ public class LoginController implements Initializable{
         loginPane.setDisable(false);
     }
 
-
     //-------------Other Methods
-    private boolean checkIfServerIsOnline() throws IOException , NumberFormatException {
-        isServerOnline = ServerHandler.isServerOnline(tx_serverIp.getText(), Integer.parseInt(tx_serverPort.getText()));
-        return isServerOnline;
-    }
     private void showInformationDialog(String header, String content){
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("INFORMATION!");

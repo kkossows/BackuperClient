@@ -7,25 +7,23 @@ import java.util.ArrayList;
  * Created by kkossowski on 18.11.2017.
  */
 public class ServerHandler {
-    private static Socket socket;
+    private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
-    private static boolean serverErrorOccurred = false;
+    private int serverListeningPortNumber; //socket has port number associated with connection, not listening port
+    private int authenticateCode;
 
 
     /**
      * Constructor
-     * - create proper form of input and output streams.
      */
-    public ServerHandler(){
-       try {
-           in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-           out = new PrintWriter(socket.getOutputStream(), true);
-       } catch (IOException e) {
-           e.printStackTrace();
-       }
+    public ServerHandler() {
+        this.socket = null;
+        this.in = null;
+        this.out = null;
+        this.serverListeningPortNumber = -1;
+        authenticateCode = -1;
     }
-
 
     /**
      * Static method responsible for making connection with server.
@@ -35,31 +33,27 @@ public class ServerHandler {
      * @param serverPortNumber
      * @return Status of connection (true mean connection established)
      */
-    public static boolean isServerOnline(String serverIpAddress, int serverPortNumber) throws IOException {
-        if (socket != null) {
-            if (socket.getPort() == serverPortNumber
-                    && socket.getInetAddress().getHostAddress().equals(serverIpAddress)) {
-                    if(!serverErrorOccurred) {
-                        return socket.isConnected();
-                    }
-                    socket.close();
-            }
-            socket.close();
-        }
+    public boolean isServerOnline(String serverIpAddress, int serverPortNumber) throws IOException {
         //if socket will not be created, it throws IOException
         socket = new Socket(serverIpAddress, serverPortNumber);
-        return socket.isConnected();
+
+        //create streams
+        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        out = new PrintWriter(socket.getOutputStream(), true);
+
+        //send init message
+        out.println(ClientMessage.INIT.name());
+        if (in.readLine().equals(ServerMessage.INIT_CORRECT.name())) {
+            //save serverListeningPortNumber
+            serverListeningPortNumber = serverPortNumber;
+            return true;
+        }
+        else {
+            closeConnection();
+            return false;
+        }
     }
 
-    /**
-     * Method responsible for informing ServerHandler that server closed our connection
-     */
-    public static void setServerError(){
-        serverErrorOccurred = true;
-    }
-    public static void clearServerError(){
-        serverErrorOccurred = false;
-    }
     /**
      * Method responsible for the authentication process.
      * @param username
@@ -74,6 +68,8 @@ public class ServerHandler {
                 out.println(password);
                 String message = in.readLine();
                 if (message.equals(ServerMessage.LOGIN_SUCCESS.name())) {
+                    //receive authentication code which will be used in backup/restore process
+                    authenticateCode = Integer.parseInt(in.readLine());
                     return true;
                 } else if (message.equals(ServerMessage.LOGIN_FAILED.name())) {
                     return false;
@@ -82,6 +78,7 @@ public class ServerHandler {
         }
         return false;
     }
+
     /**
      * Method responsible for the registration process.
      * @param username
@@ -104,6 +101,7 @@ public class ServerHandler {
         }
         return false;
     }
+
     /**
      * Method responsible for getting backup files list from server
      * (server send absolute path of files)
@@ -128,32 +126,29 @@ public class ServerHandler {
         }
         return backupFiles;
     }
+
     /**
      * Method responsible for getting all file versions stored on server side.
      * @param file
      * @return list of strings, each file version is represented by string (last modification date in proper format)
      */
-    public ArrayList<String> getAllFileVersionsFromServer(File file){
-        ArrayList<String> versionsList= new ArrayList<>();
-
-        try {
-            out.println(ClientMessage.GET_ALL_FILE_VERSIONS.name());
-            if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
-                out.println(file.getAbsolutePath());
-                if (in.readLine().equals(ServerMessage.SENDING_FILE_VERSIONS.name())) {
-                    String nextMessageLine = in.readLine();
-                    while (nextMessageLine.equals(ServerMessage.SENDING_FILE_VERSIONS_FINISHED.name())) {
-                        versionsList.add(nextMessageLine);
-                        nextMessageLine = in.readLine();
-                    }
+    public ArrayList<String> getAllFileVersionsFromServer(File file) throws IOException {
+        ArrayList<String> versionsList = new ArrayList<>();
+        out.println(ClientMessage.GET_ALL_FILE_VERSIONS.name());
+        if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
+            out.println(file.getAbsolutePath());
+            if (in.readLine().equals(ServerMessage.SENDING_FILE_VERSIONS.name())) {
+                String nextMessageLine = in.readLine();
+                while (!nextMessageLine.equals(ServerMessage.SENDING_FILE_VERSIONS_FINISHED.name())) {
+                    versionsList.add(nextMessageLine);
+                    nextMessageLine = in.readLine();
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return versionsList;
         }
+
         return versionsList;
     }
+
     /**
      * Method responsible for removing file with all file versions on server side.
      * @param file
@@ -175,31 +170,26 @@ public class ServerHandler {
         return false;
     }
 
-
     /**
      * Method responsible for removing one file version from server side.
      * @param filePath
      * @param fileVersion
      * @return operation result (true - success)
      */
-    public boolean removeSelectedFileVersion(String filePath, String fileVersion){
-        try {
-            out.println(ClientMessage.REMOVE_FILE_VERSION.name());
-            if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
-                out.println(filePath);
-                if (in.readLine().equals(ServerMessage.GET_FILE_VERSION.name())) {
-                    out.println(fileVersion);
-                    if(in.readLine().equals(ServerMessage.FILE_VERSION_REMOVED.name())){
-                        return true;
-                    }
+    public boolean removeSelectedFileVersion(String filePath, String fileVersion) throws IOException {
+        out.println(ClientMessage.REMOVE_FILE_VERSION.name());
+        if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
+            out.println(filePath);
+            if (in.readLine().equals(ServerMessage.GET_FILE_VERSION.name())) {
+                out.println(fileVersion);
+                if (in.readLine().equals(ServerMessage.FILE_VERSION_REMOVED.name())) {
+                    return true;
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
         }
         return false;
     }
+
     /**
      * Method responsible for deleting user on server side.
      * @return operation result
@@ -217,6 +207,7 @@ public class ServerHandler {
         }
         return false;
     }
+
     /**
      * Method responsible for the logout procedure.
      * @return operation result
@@ -233,6 +224,7 @@ public class ServerHandler {
         }
         return false;
     }
+
     /**
      * Method responsible for the close connection process.
      * - close input and output streams
@@ -248,14 +240,23 @@ public class ServerHandler {
         }
     }
 
-
-    public static Socket getSocket() {
+    public Socket getSocket() {
         return socket;
     }
+
     public BufferedReader getIn() {
         return in;
     }
+
     public PrintWriter getOut() {
         return out;
+    }
+
+    public int getAuthenticateCode(){
+        return authenticateCode;
+    }
+
+    public int getServerListeningPortNumber(){
+        return serverListeningPortNumber;
     }
 }

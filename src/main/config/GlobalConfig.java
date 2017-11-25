@@ -40,7 +40,6 @@ public class GlobalConfig implements Serializable {
             return false;
     }
 
-
     public String getDefaultServerIpAddress() {
         return defaultServerIpAddress;
     }

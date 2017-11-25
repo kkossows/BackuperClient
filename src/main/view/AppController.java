@@ -21,8 +21,7 @@ import javafx.stage.Stage;
 import main.config.ConfigDataManager;
 import main.config.GlobalConfig;
 import main.config.UserConfig;
-import main.networking.BackupTask;
-import main.networking.RestoreTask;
+import main.networking.tasks.*;
 import main.user.User;
 
 import java.io.File;
@@ -144,7 +143,6 @@ public class AppController implements Initializable {
         }
     }
 
-
     public void makeDraggable(Scene scene, Stage stage) {
         scene.setOnMousePressed(new EventHandler<MouseEvent>() {
             @Override
@@ -169,12 +167,6 @@ public class AppController implements Initializable {
         lb_copying.setVisible(true);
         progressBar.setVisible(true);
         progressIndicator.setVisible(true);
-
-        //clear
-        progressBar.progressProperty().unbind();
-        progressBar.setProgress(0);
-        progressIndicator.progressProperty().unbind();
-        progressIndicator.setProgress(0);
     }
     private void hideProgressStatistics() {
         lb_filePath.setVisible(false);
@@ -191,7 +183,14 @@ public class AppController implements Initializable {
         //otherwise change stage showOpenDialog(...) to showOpenDialog(null)
         File file = fileChooser.showOpenDialog(((Node) event.getSource()).getScene().getWindow());
         if (file != null) {
-            filesToArchive.add(file);
+            if (!filesToArchive.contains(file))
+                    filesToArchive.add(file);
+            else {
+                showInformationDialog(
+                        "FILE ALREADY EXISTS IN THE LIST",
+                        ""
+                );
+            }
         }
 
         //userConfigFile is updated only with closing the app
@@ -232,9 +231,15 @@ public class AppController implements Initializable {
         //check if user selected file
         int index = lv_filesToArchive.getSelectionModel().getSelectedIndex();
         if (index > -1) {
-            //create new Task
+
+            //create array with only one element
+            ArrayList<File> oneElementArray = new ArrayList<>();
+            oneElementArray.add(filesToArchive.get(index));
+
+
+            //run backup method
             makeBackup(
-                    new ArrayList<File>(){{ filesToArchive.get(index); }}
+                    oneElementArray
             );
         } else {
             showWarningDialog(
@@ -246,11 +251,11 @@ public class AppController implements Initializable {
     private void makeBackup(List<File> filesToArchive){
         //create new Task
         Task<Boolean> backupTask = new BackupTask(
-                user.getServerHandler().getSocket(),
-                user.getServerHandler().getIn(),
-                user.getServerHandler().getOut(),
+                user.getServerHandler().getSocket().getInetAddress().getHostAddress(),
+                user.getServerHandler().getServerListeningPortNumber(),
+                user.getServerHandler().getAuthenticateCode(),
                 filesToArchive,
-                filesOnServer
+                this
         );
         //define what happen after task finished with no error
         backupTask.setOnSucceeded(e ->{
@@ -263,8 +268,10 @@ public class AppController implements Initializable {
         });
         //bind variables
         progressBar.progressProperty().unbind();
+        progressBar.setProgress(0);
         progressBar.progressProperty().bind(backupTask.progressProperty());
         progressIndicator.progressProperty().unbind();
+        progressIndicator.setProgress(0);
         progressIndicator.progressProperty().bind(backupTask.progressProperty());
         lb_filePath.textProperty().unbind();
         lb_filePath.textProperty().bind(backupTask.messageProperty());
@@ -287,42 +294,37 @@ public class AppController implements Initializable {
         final int indexOfSelectedFile = lv_filesOnServer.getSelectionModel().getSelectedIndex();
 
         if(indexOfSelectedFile != -1){
+            //clear version list
+            fileVersions.clear();
+
             //disable showVersion button until one download finished
             btn_showVersionFile.setDisable(true);
-            btn_showVersionFile.setVisible(false);
 
             //show progress ring
-            progress_versions.setDisable(false);
+            progress_versions.setVisible(true);
 
             //set file name label
             lb_fileName.setText(filesOnServer.get(indexOfSelectedFile).getAbsolutePath());
 
-            //declare tasks
-            Task<ArrayList<String>> showVersionTask = new Task<ArrayList<String>>() {
-                @Override
-                protected ArrayList<String> call() throws Exception {
-                    //get selected file indexOfSelectedFile and find it in arraylist to get require file
-                    File selectedFile = filesOnServer.get(indexOfSelectedFile);
+            //create new Task
+            Task<ArrayList<String>> showVersionsTask = new ShowVersionsTask(
+                    filesOnServer.get(indexOfSelectedFile),
+                    user
+            );
 
-                    //return received list from server
-                    return user.getServerHandler().getAllFileVersionsFromServer(selectedFile);
-                }
-            };
             //define what happen after task finished with no error
-            showVersionTask.setOnSucceeded(e -> {
+            showVersionsTask.setOnSucceeded(e -> {
                 //add hole list to observable list
-                fileVersions.addAll(showVersionTask.getValue());
-
+                fileVersions.addAll(showVersionsTask.getValue());
 
                 //hide progress
-                progress_versions.setDisable(true);
+                progress_versions.setVisible(false);
 
                 //unlock buttons
                 btn_showVersionFile.setDisable(false);
-                btn_showVersionFile.setVisible(true);
             });
             //run task
-            Thread showVersionThread = new Thread(showVersionTask);
+            Thread showVersionThread = new Thread(showVersionsTask);
             showVersionThread.setDaemon(true);
             showVersionThread.start();
 
@@ -346,19 +348,11 @@ public class AppController implements Initializable {
 
 
             //declare tasks
-            Task<Boolean> removeFileTask = new Task<Boolean>() {
-                @Override
-                protected Boolean call() throws Exception {
-                    if (isConfirmed) {
-                        boolean fileRemoved = user.getServerHandler().removeSelectedFile(
-                                filesOnServer.get(indexOfSelectedFile)
-                        );
-                        return fileRemoved;
-                    } else {
-                        return false;
-                    }
-                }
-            };
+            Task<Boolean> removeFileTask = new RemoveFileTask(
+                    isConfirmed,
+                    user,
+                    filesOnServer.get(indexOfSelectedFile)
+            );
             removeFileTask.setOnSucceeded(e -> {
                 if (removeFileTask.getValue()) {
                     //remove selected file from list and view
@@ -370,6 +364,10 @@ public class AppController implements Initializable {
                     //remove selected file from list and view
                     filesOnServer.remove(indexOfSelectedFile);
                 }
+            });
+            removeFileTask.setOnFailed(e -> {
+                //connection was closed
+                //TO_DO
             });
             //run task
             Thread removeFileThread = new Thread(removeFileTask);
@@ -426,6 +424,7 @@ public class AppController implements Initializable {
                         case 1:
                             //user want to override existing file
                             backupFile.delete();
+                            break;
                         case 0:
                             //user want to create new file with version in name
                             //new file name example: oldName_version.txt -> test_11-19-2017_20-45-13.txt
@@ -463,15 +462,17 @@ public class AppController implements Initializable {
 
             //create new Task
             Task<Boolean> restoringTask = new RestoreTask(
-                    user.getServerHandler().getSocket(),
-                    user.getServerHandler().getIn(),
-                    user.getServerHandler().getOut(),
+                    user.getServerHandler().getSocket().getInetAddress().getHostAddress(),
+                    user.getServerHandler().getServerListeningPortNumber(),
+                    user.getServerHandler().getAuthenticateCode(),
                     backupFile, backupFilePath, backupFileVersion
             );
             //bind variables
             progressBar.progressProperty().unbind();
+            progressBar.setProgress(0);
             progressBar.progressProperty().bind(restoringTask.progressProperty());
             progressIndicator.progressProperty().unbind();
+            progressIndicator.setProgress(0);
             progressIndicator.progressProperty().bind(restoringTask.progressProperty());
             lb_filePath.textProperty().unbind();
             lb_filePath.textProperty().bind(restoringTask.messageProperty());
@@ -515,20 +516,12 @@ public class AppController implements Initializable {
                     "Continue?");
 
             //declare tasks
-            Task<Boolean> removeFileVersionTask = new Task<Boolean>() {
-                @Override
-                protected Boolean call() throws Exception {
-                    if (isConfirmed) {
-                        boolean fileVersionRemoved = user.getServerHandler().removeSelectedFileVersion(
-                                lb_fileName.getText(),
-                                fileVersions.get(indexOfSelectedFileVersion)
-                        );
-                        return fileVersionRemoved;
-                    } else {
-                        return false;
-                    }
-                }
-            };
+            Task<Boolean> removeFileVersionTask = new RemoveFileVersionTask(
+                    isConfirmed,
+                    user,
+                    lb_fileName.getText(),
+                    fileVersions.get(indexOfSelectedFileVersion)
+            );
             removeFileVersionTask.setOnSucceeded(e -> {
                 if (removeFileVersionTask.getValue()) {
                     //if it was the last version, remove also file from filesOnServerList
@@ -552,6 +545,10 @@ public class AppController implements Initializable {
                     //remove selected file version from list and view
                     fileVersions.remove(indexOfSelectedFileVersion);
                 }
+            });
+            removeFileVersionTask.setOnFailed(e -> {
+                //connection was closed
+                //TO_DO
             });
             //run task
             Thread removeFileVersionThread = new Thread(removeFileVersionTask);
@@ -747,6 +744,10 @@ public class AppController implements Initializable {
      */
     public void setUser(User user){
         this.user = user;
+    }
+    public void addFileToFilesOnServer(File file){
+        if (!filesOnServer.contains(file))
+            filesOnServer.add(file);
     }
 
 
