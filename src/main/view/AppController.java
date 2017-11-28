@@ -24,14 +24,12 @@ import main.config.UserConfig;
 import main.networking.tasks.*;
 import main.user.User;
 
+import javax.xml.ws.handler.Handler;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.ResourceBundle;
+import java.util.*;
 
 /**
  * Created by kkossowski on 18.11.2017.
@@ -84,6 +82,8 @@ public class AppController implements Initializable {
 
     //----------------------Other Variables
     private User user;
+    private boolean isBackupPocessRunning;
+    private boolean isRestoreProcesRunning;
 
     //--------------Mouse event
     private double xOffset;
@@ -132,7 +132,7 @@ public class AppController implements Initializable {
 
             //turn on or off menuItem with autocomplete based on user flag
             if (!user.isAutoCompleteOn())
-                mi_autocomplete.setDisable(false);
+                mi_autocomplete.setDisable(true);
 
             //hide progress statistics
             hideProgressStatistics();
@@ -140,6 +140,10 @@ public class AppController implements Initializable {
             //hide progress
             progress_versions.setDisable(true);
             progress_versions.setVisible(false);
+
+            //initialize other variables
+            isBackupPocessRunning = false;
+            isRestoreProcesRunning = false;
         }
     }
 
@@ -215,40 +219,58 @@ public class AppController implements Initializable {
 
     @FXML
     public void btn_backupAll_OnClick() {
-        if (filesToArchive.size() == 0) {
+        //cannot start one backup during another (and during restoring process)
+        if ( isBackupPocessRunning || isRestoreProcesRunning ){
             showWarningDialog(
-                    "No files to archive.",
-                    "Please, add file(s) and click the button again."
+                    "ANOTHER PROCESS ALREADY RUNNING",
+                    "Wait until another backup/restore process finished."
             );
         } else {
-            //create new Task
-            makeBackup(filesToArchive);
+            if (filesToArchive.size() == 0) {
+                showWarningDialog(
+                        "No files to archive.",
+                        "Please, add file(s) and click the button again."
+                );
+            } else {
+                //create new Task
+                makeBackup(filesToArchive);
+            }
         }
-
     }
     @FXML
     public void btn_backupOnlySelected_OnClick() {
-        //check if user selected file
-        int index = lv_filesToArchive.getSelectionModel().getSelectedIndex();
-        if (index > -1) {
-
-            //create array with only one element
-            ArrayList<File> oneElementArray = new ArrayList<>();
-            oneElementArray.add(filesToArchive.get(index));
-
-
-            //run backup method
-            makeBackup(
-                    oneElementArray
+        //cannot start one backup during another (and during restoring process)
+        if ( isBackupPocessRunning || isRestoreProcesRunning ) {
+            showWarningDialog(
+                    "ANOTHER PROCESS ALREADY RUNNING",
+                    "Wait until another backup/restore process finished."
             );
         } else {
-            showWarningDialog(
-                    "Error",
-                    "No file selected. Please first select the file and press button again."
-            );
+            //check if user selected file
+            int index = lv_filesToArchive.getSelectionModel().getSelectedIndex();
+            if (index > -1) {
+
+                //create array with only one element
+                ArrayList<File> oneElementArray = new ArrayList<>();
+                oneElementArray.add(filesToArchive.get(index));
+
+
+                //run backup method
+                makeBackup(
+                        oneElementArray
+                );
+            } else {
+                showWarningDialog(
+                        "Error",
+                        "No file selected. Please first select the file and press button again."
+                );
+            }
         }
     }
     private void makeBackup(List<File> filesToArchive){
+        //set flag
+        isBackupPocessRunning = true;
+
         //create new Task
         Task<Boolean> backupTask = new BackupTask(
                 user.getServerHandler().getSocket().getInetAddress().getHostAddress(),
@@ -259,12 +281,19 @@ public class AppController implements Initializable {
         );
         //define what happen after task finished with no error
         backupTask.setOnSucceeded(e ->{
+            //set flag
+            isBackupPocessRunning = false;
+
             if(backupTask.getValue()){
                 showInformationDialog(
                         "All files sent.",
                         "Backup complete."
                 );
             }
+        });
+        backupTask.setOnFailed(e ->{
+            //server not available
+            loseConnectionWithServer();
         });
         //bind variables
         progressBar.progressProperty().unbind();
@@ -323,6 +352,10 @@ public class AppController implements Initializable {
                 //unlock buttons
                 btn_showVersionFile.setDisable(false);
             });
+            showVersionsTask.setOnFailed(e -> {
+                //server not available
+                loseConnectionWithServer();
+            });
             //run task
             Thread showVersionThread = new Thread(showVersionsTask);
             showVersionThread.setDaemon(true);
@@ -366,8 +399,8 @@ public class AppController implements Initializable {
                 }
             });
             removeFileTask.setOnFailed(e -> {
-                //connection was closed
-                //TO_DO
+                //server not available
+                loseConnectionWithServer();
             });
             //run task
             Thread removeFileThread = new Thread(removeFileTask);
@@ -384,124 +417,145 @@ public class AppController implements Initializable {
     public void btn_restoreSelectedFileVersion_OnClick() {
         //WARNING! - restored file will not be added to files to archive!
 
-        int indexOfSelectedVileVersion = lv_fileVersions.getSelectionModel().getSelectedIndex();
+        //cannot start one restore process during another (and during backup process)
+        if ( isRestoreProcesRunning || isBackupPocessRunning ){
+            showWarningDialog(
+                    "ANOTHER PROCESS ALREADY RUNNING",
+                    "Wait until another backup/restore process finished."
+            );
+        } else {
+            //get selected index
+            int indexOfSelectedVileVersion = lv_fileVersions.getSelectionModel().getSelectedIndex();
 
-        if (indexOfSelectedVileVersion > -1) {
-            //check if file is already on local file system
-            //if it is, ask if user want to override it or create new file with
-            String backupFilePath = lb_fileName.getText();
-            String backupFileVersion = fileVersions.get(indexOfSelectedVileVersion);
-            File backupFile = new File(backupFilePath);
+            if (indexOfSelectedVileVersion > -1) {
+                //check if file is already on local file system
+                //if it is, ask if user want to override it or create new file with
+                String backupFilePath = lb_fileName.getText();
+                String backupFileVersion = fileVersions.get(indexOfSelectedVileVersion);
+                File backupFile = new File(backupFilePath);
 
-            if (backupFile.exists()) {
-                //file exist on local system file
+                if (backupFile.exists()) {
+                    //file exist on local system file
 
-                //verify version of file on local file system
-                SimpleDateFormat sdf = new SimpleDateFormat("MM-dd-yyyy_HH-mm-ss");
-                String localFileVersion = sdf.format(backupFile.lastModified());
+                    //verify version of file on local file system
+                    SimpleDateFormat sdf = new SimpleDateFormat("MM-dd-yyyy_HH-mm-ss");
+                    String localFileVersion = sdf.format(backupFile.lastModified());
 
-                if (backupFileVersion.equals(localFileVersion)) {
-                    //same versions - show information and return from method
+                    if (backupFileVersion.equals(localFileVersion)) {
+                        //same versions - show information and return from method
 
-                    showInformationDialog(
-                            "Same file versions",
-                            "Selected version file already exists on local system file."
-                    );
-                    return;
+                        showInformationDialog(
+                                "Same file versions",
+                                "Selected version file already exists on local system file."
+                        );
+                        return;
 
-                } else {
-                    //different versions
+                    } else {
+                        //different versions
 
-                    //ask user
-                    int questionAnswer = showYesNoDialog(
-                            "Different file version on local file system.",
-                            "Do you want to override file?\nYES-override\nNO-create new file with version in name"
+                        //ask user
+                        int questionAnswer = showYesNoDialog(
+                                "Different file version on local file system.",
+                                "Do you want to override file?\nYES-override\nNO-create new file with version in name"
 
-                    );
+                        );
 
-                    //preparing empty File
-                    switch (questionAnswer) {
-                        case 1:
-                            //user want to override existing file
-                            backupFile.delete();
-                            break;
-                        case 0:
-                            //user want to create new file with version in name
-                            //new file name example: oldName_version.txt -> test_11-19-2017_20-45-13.txt
-                            String newBackupFileName;
-                            String[] fileNameSplitter = (backupFile.getName()).split("\\.");
-                            newBackupFileName = fileNameSplitter[0] + "_" + backupFileVersion + "." + fileNameSplitter[1];
+                        //preparing empty File
+                        switch (questionAnswer) {
+                            case 1:
+                                //user want to override existing file
+                                backupFile.delete();
+                                break;
+                            case 0:
+                                //user want to create new file with version in name
+                                //new file name example: oldName_version.txt -> test_11-19-2017_20-45-13.txt
+                                String newBackupFileName;
+                                String[] fileNameSplitter = (backupFile.getName()).split("\\.");
+                                newBackupFileName = fileNameSplitter[0] + "_" + backupFileVersion + "." + fileNameSplitter[1];
 
-                            String newBackupFilePath;
-                            newBackupFilePath = backupFile.getParent() + "/" + newBackupFileName;
+                                String newBackupFilePath;
+                                newBackupFilePath = backupFile.getParent() + "/" + newBackupFileName;
 
-                            backupFile = new File(newBackupFilePath);
-                            break;
-                        case -1:
-                            //user canceled operation - end method
+                                backupFile = new File(newBackupFilePath);
+                                break;
+                            case -1:
+                                //user canceled operation - end method
+                                return;
+                        }
+                        //create empty file
+                        try {
+                            backupFile.createNewFile();
+                        } catch (IOException e) {
+                            e.printStackTrace();
                             return;
+                        }
                     }
-                    //create empty file
+                } else {
+                    //file not exist on local file system
+
+                    //create sub-folders and empty file
                     try {
+                        backupFile.getParentFile().mkdirs();
                         backupFile.createNewFile();
                     } catch (IOException e) {
                         e.printStackTrace();
+                        return;
                     }
                 }
+
+                //set flag
+                isRestoreProcesRunning = true;
+
+                //create new Task
+                Task<Boolean> restoringTask = new RestoreTask(
+                        user.getServerHandler().getSocket().getInetAddress().getHostAddress(),
+                        user.getServerHandler().getServerListeningPortNumber(),
+                        user.getServerHandler().getAuthenticateCode(),
+                        backupFile, backupFilePath, backupFileVersion
+                );
+                //bind variables
+                progressBar.progressProperty().unbind();
+                progressBar.setProgress(0);
+                progressBar.progressProperty().bind(restoringTask.progressProperty());
+                progressIndicator.progressProperty().unbind();
+                progressIndicator.setProgress(0);
+                progressIndicator.progressProperty().bind(restoringTask.progressProperty());
+                lb_filePath.textProperty().unbind();
+                lb_filePath.textProperty().bind(restoringTask.messageProperty());
+
+                //set statistics title
+                lb_progressType.setText("Restoring file:");
+
+                //show statistics
+                showProgressStatistics();
+
+                //define what happen after task finished with no error
+                restoringTask.setOnSucceeded(e -> {
+                    //set flag
+                    isRestoreProcesRunning = false;
+
+                    if (restoringTask.getValue()) {
+                        showInformationDialog(
+                                "Restoring file finished.",
+                                ""
+                        );
+                    }
+                });
+                restoringTask.setOnFailed(e -> {
+                    //server not available
+                    loseConnectionWithServer();
+                });
+                //run task
+                Thread restoringThread = new Thread(restoringTask);
+                restoringThread.setDaemon(true);
+                restoringThread.start();
+
             } else {
-                //file not exist on local file system
-
-                //create sub-folders and empty file
-                try {
-                    backupFile.getParentFile().mkdirs();
-                    backupFile.createNewFile();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                showWarningDialog(
+                        "Error",
+                        "No file selected. Please first select the file and press button again."
+                );
             }
-
-            //create new Task
-            Task<Boolean> restoringTask = new RestoreTask(
-                    user.getServerHandler().getSocket().getInetAddress().getHostAddress(),
-                    user.getServerHandler().getServerListeningPortNumber(),
-                    user.getServerHandler().getAuthenticateCode(),
-                    backupFile, backupFilePath, backupFileVersion
-            );
-            //bind variables
-            progressBar.progressProperty().unbind();
-            progressBar.setProgress(0);
-            progressBar.progressProperty().bind(restoringTask.progressProperty());
-            progressIndicator.progressProperty().unbind();
-            progressIndicator.setProgress(0);
-            progressIndicator.progressProperty().bind(restoringTask.progressProperty());
-            lb_filePath.textProperty().unbind();
-            lb_filePath.textProperty().bind(restoringTask.messageProperty());
-
-            //set statistics title
-            lb_progressType.setText("Restoring file:");
-
-            //show statistics
-            showProgressStatistics();
-
-            //define what happen after task finished with no error
-            restoringTask.setOnSucceeded(e -> {
-                if (restoringTask.getValue()) {
-
-                    showInformationDialog(
-                            "Restoring file finished.",
-                            ""
-                    );
-                }
-            });
-            //run task
-            Thread restoringThread = new Thread(restoringTask);
-            restoringThread.setDaemon(true);
-            restoringThread.start();
-        } else {
-            showWarningDialog(
-                    "Error",
-                    "No file selected. Please first select the file and press button again."
-            );
         }
     }
     @FXML
@@ -547,8 +601,8 @@ public class AppController implements Initializable {
                 }
             });
             removeFileVersionTask.setOnFailed(e -> {
-                //connection was closed
-                //TO_DO
+                //server not available
+                loseConnectionWithServer();
             });
             //run task
             Thread removeFileVersionThread = new Thread(removeFileVersionTask);
@@ -571,54 +625,60 @@ public class AppController implements Initializable {
         primaryStage.setIconified(true);
     }
     @FXML
-    public void btn_quit_OnClick(){
-        //show waiting screen
-        showWaitingScene();
+    public void btn_quit_OnClick() {
+        if (isBackupPocessRunning || isRestoreProcesRunning) {
+            showWarningDialog(
+                    "BACKUP/RESTORE PROCESS IS RUNNING",
+                    "Wait until it finished!"
+            );
+        } else {
+            //show waiting screen
+            showWaitingScene();
 
-        //declare tasks
-        Task<Boolean> logoutTask = new Task<Boolean>() {
-            @Override
-            protected Boolean call() throws Exception {
-                updateMessage("LOGOUT PROCEDURE. Please wait...");
+            //declare tasks
+            Task<Boolean> logoutTask = new Task<Boolean>() {
+                @Override
+                protected Boolean call() throws Exception {
+                    updateMessage("LOGOUT PROCEDURE. Please wait...");
 
-                //logout user
-                boolean isSucceeded = user.getServerHandler().logoutUser();
+                    //logout user
+                    boolean isSucceeded = user.getServerHandler().logoutUser();
 
-                if (isSucceeded) {
-                    //show information
-                    updateMessage("USER LOGOUT. Application will close soon...");
+                    if (isSucceeded) {
+                        //show information
+                        updateMessage("USER LOGOUT. Application will close soon...");
 
-                    //close session connection
-                    user.getServerHandler().closeConnection();
+                        //close session connection
+                        user.getServerHandler().closeConnection();
 
-                    //update userConfigFile
-                    UserConfig newUserConfig = new UserConfig();
-                    newUserConfig.setUsername(user.getUsername());
-                    newUserConfig.setUserFilesToArchive(filesToArchive);
-                    ConfigDataManager.createUserConfig(newUserConfig);
+                        //update userConfigFile
+                        UserConfig newUserConfig = new UserConfig();
+                        newUserConfig.setUsername(user.getUsername());
+                        newUserConfig.setUserFilesToArchive(filesToArchive);
+                        ConfigDataManager.createUserConfig(newUserConfig);
 
-                    //some visual effects
-                    Thread.sleep(4000);
+                        //some visual effects
+                        Thread.sleep(4000);
+                    }
+                    return isSucceeded;
                 }
-                return isSucceeded;
-            }
-        };
-        //define what happen after task finished with no error
-        logoutTask.setOnSucceeded(e -> {
-            if (logoutTask.getValue())
-            {
-                //close application
-                Platform.exit();
-            }
-        });
-        //bind label
-        lb_waitingPaneLabel.textProperty().unbind();
-        lb_waitingPaneLabel.textProperty().bind(logoutTask.messageProperty());
+            };
+            //define what happen after task finished with no error
+            logoutTask.setOnSucceeded(e -> {
+                if (logoutTask.getValue()) {
+                    //close application
+                    Platform.exit();
+                }
+            });
+            //bind label
+            lb_waitingPaneLabel.textProperty().unbind();
+            lb_waitingPaneLabel.textProperty().bind(logoutTask.messageProperty());
 
-        //run task
-        Thread logoutThread = new Thread(logoutTask);
-        logoutThread.setDaemon(true);
-        logoutThread.start();
+            //run task
+            Thread logoutThread = new Thread(logoutTask);
+            logoutThread.setDaemon(true);
+            logoutThread.start();
+        }
     }
 
 
@@ -628,6 +688,7 @@ public class AppController implements Initializable {
      */
     @FXML
     public void mi_autocomplete_OnClick(){
+        //menu item is enable only when user checked "Remember me" during login process
         ConfigDataManager.createGlobalConfig(new GlobalConfig());
         showInformationDialog(
                 "Disable autocomplete login formula done",
@@ -657,7 +718,7 @@ public class AppController implements Initializable {
                     user
             );
 
-            deleteProfile.setOnSucceeded(event -> {
+            deleteProfile.setOnSucceeded(e -> {
                 if(deleteProfile.getValue()){
                     showInformationDialog(
                             "Your profile has been deleted.",
@@ -666,6 +727,10 @@ public class AppController implements Initializable {
                     //close application
                     Platform.exit();
                 }
+            });
+            deleteProfile.setOnFailed(e -> {
+                //server not available
+                loseConnectionWithServer();
             });
             //bind label
             lb_waitingPaneLabel.textProperty().unbind();
@@ -718,6 +783,27 @@ public class AppController implements Initializable {
         appPane.setDisable(false);
     }
 
+    private void loseConnectionWithServer(){
+        //inform user
+        showWarningDialog(
+                "CONNECTION LOSS",
+                "Server is unavailable"
+        );
+
+        //launch waiting scene
+        showWaitingScene();
+        lb_waitingPaneLabel.setText("Application will be closed soon...");
+
+        //exit application after 5 seconds
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                Platform.exit();
+            }
+        }, 3 * 1000);
+    }
+
     //-----------------------Other Methods
     /**
      * Metoda, dzięki której jesteśmy w stanie przekazać obecnego użytkownika do aplikacji
@@ -728,6 +814,10 @@ public class AppController implements Initializable {
     public void addFileToFilesOnServer(File file){
         if (!filesOnServer.contains(file))
             filesOnServer.add(file);
+    }
+    public void updateFilesToArchiveList(ArrayList<File> newFilesToArchive){
+        this.filesToArchive.clear();
+        this.filesToArchive.addAll(newFilesToArchive);
     }
 
 

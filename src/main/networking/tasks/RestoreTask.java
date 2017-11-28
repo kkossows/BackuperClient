@@ -69,55 +69,65 @@ public class RestoreTask extends Task<Boolean> {
     }
 
     private boolean runRestoreProcedure() throws Exception {
-        //update label
-        this.updateMessage(filePath);
+        try {
+            //update label
+            this.updateMessage(filePath);
 
-        boolean isSendingFile = false;
-        long fileSize = 0;
+            boolean isSendingFile = false;
+            long fileSize = 0;
 
-        out.println(ClientMessage.RESTORE_FILE.name());
-        if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
-            out.println(filePath);
-            if (in.readLine().equals(ServerMessage.GET_FILE_VERSION.name())) {
-                out.println(fileVersion);
-                if (in.readLine().equals(ServerMessage.SENDING_FILE_SIZE.name())) {
-                    fileSize = Long.parseLong(in.readLine());
-                    if (in.readLine().equals(ServerMessage.SENDING_FILE.name())) {
-                        isSendingFile = true;
+            out.println(ClientMessage.RESTORE_FILE.name());
+            if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
+                out.println(filePath);
+                if (in.readLine().equals(ServerMessage.GET_FILE_VERSION.name())) {
+                    out.println(fileVersion);
+                    if (in.readLine().equals(ServerMessage.SENDING_FILE_SIZE.name())) {
+                        fileSize = Long.parseLong(in.readLine());
+                        if (in.readLine().equals(ServerMessage.SENDING_FILE.name())) {
+                            isSendingFile = true;
+                        }
                     }
                 }
             }
-        }
 
-        if (isSendingFile) {
-            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+            if (isSendingFile) {
+                DataInputStream inputStream = new DataInputStream(socket.getInputStream());
 
-            try (FileOutputStream outputStream = new FileOutputStream(emptyFileOnLocalSystem)) {
-                byte[] buffer = new byte[main.config.Properties.bufferSize];
-                int numberOfReadBytes = 0;
-                long bytesToRead = fileSize;
-                long bytesRead = 0;
+                try (FileOutputStream outputStream = new FileOutputStream(emptyFileOnLocalSystem)) {
+                    byte[] buffer = new byte[main.config.Properties.bufferSize];
+                    int numberOfReadBytes = 0;
+                    long bytesToRead = fileSize;
+                    long bytesRead = 0;
 
-                while (bytesToRead > 0) {
-                    if ((numberOfReadBytes = inputStream.read(buffer, 0, (int) Math.min(bytesToRead, buffer.length))) > 0) {
+                    while (bytesToRead > 0) {
+                        if ((numberOfReadBytes = inputStream.read(buffer, 0, (int) Math.min(bytesToRead, buffer.length))) > 0) {
 
-                        outputStream.write(buffer,0,numberOfReadBytes);
-                        bytesToRead -= numberOfReadBytes;
-                        bytesRead += numberOfReadBytes;
+                            outputStream.write(buffer, 0, numberOfReadBytes);
+                            bytesToRead -= numberOfReadBytes;
+                            bytesRead += numberOfReadBytes;
 
-                        //set statistics
-                        updateProgress(bytesRead, fileSize);
+                            //set statistics
+                            updateProgress(bytesRead, fileSize);
+                        }
                     }
+                }//close file stream
+
+                //verify whether server finished
+                if (in.readLine().equals(ServerMessage.SENDING_FILE_FINISHED.name())) {
+                    //restored file not show in files to archive list
+                    //user only see informationDialog that restoring finished
+                    return true;
                 }
-            }//close file stream
-            //verify whether server finished
-            if (in.readLine().equals(ServerMessage.SENDING_FILE_FINISHED.name())) {
-                //restored file not show in files to archive list
-                //user only see informationDialog that restoring finished
-                return true;
             }
+            return false;
+        } catch (Exception e){
+            //server disconnected
+            //delete new file
+            emptyFileOnLocalSystem.delete();
+
+            //rethrow the exception
+            throw e;
         }
-        return false;
     }
 
     private void closeConnection(){
@@ -128,5 +138,9 @@ public class RestoreTask extends Task<Boolean> {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public File getEmptyFile(){
+        return emptyFileOnLocalSystem;
     }
 }

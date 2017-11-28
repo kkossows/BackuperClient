@@ -6,7 +6,7 @@ import main.config.GlobalConfig;
 import main.user.User;
 
 /**
- * Created by rkossowski on 28.11.2017.
+ * Created by kkossowski on 28.11.2017.
  */
 public class DeleteProfileTask extends Task<Boolean> {
     private User user;

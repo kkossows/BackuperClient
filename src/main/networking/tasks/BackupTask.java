@@ -9,6 +9,7 @@ import main.view.AppController;
 import java.io.*;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -72,19 +73,22 @@ public class BackupTask extends Task<Boolean> {
     }
 
     private boolean runBackupProcedure() throws IOException {
+        //check if files exist on local file system
+        ArrayList<File> existingFilesToArchive = removeNonExistingFilesFromList();
+
         //statistics variables
-        int stats_filesToArchive = filesToArchive.size();
+        int stats_filesToArchive = existingFilesToArchive.size();
         int stats_sendingFileNumber = 0;
 
         //open proper output stream
         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
         //if we close outputStream, socket will be closed to
 
-        for ( File file : filesToArchive) {
+        for (File file : existingFilesToArchive) {
             //update statistics variables
             stats_sendingFileNumber += 1;
             this.updateMessage(
-                    "[" + stats_sendingFileNumber + "/" +  stats_filesToArchive + "]"
+                    "[" + stats_sendingFileNumber + "/" + stats_filesToArchive + "]"
                             + " ->" + file.getAbsolutePath()
             );
 
@@ -92,57 +96,48 @@ public class BackupTask extends Task<Boolean> {
             boolean sendFile = false;
             long fileSize = file.length();
 
-            try {
-                out.println(ClientMessage.BACKUP_FILE.name());
-                if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
-                    out.println(file.getAbsolutePath());
-                    if (in.readLine().equals(ServerMessage.GET_FILE_VERSION.name())) {
-                        out.println(getVersionOfFile(file));
-                        if (in.readLine().equals(ServerMessage.GET_FILE_SIZE.name())) {
-                            out.println(fileSize);
-                            String message = in.readLine();
-                            if (message.equals(ServerMessage.GET_FILE_CONTENT.name())) {
-                                sendFile = true;
-                            }
-                            else if (message.equals(ServerMessage.FILE_VERSION_EXISTS.name())){
-                                sendFile = false;
-                            }
+            out.println(ClientMessage.BACKUP_FILE.name());
+            if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
+                out.println(file.getAbsolutePath());
+                if (in.readLine().equals(ServerMessage.GET_FILE_VERSION.name())) {
+                    out.println(getVersionOfFile(file));
+                    if (in.readLine().equals(ServerMessage.GET_FILE_SIZE.name())) {
+                        out.println(fileSize);
+                        String message = in.readLine();
+                        if (message.equals(ServerMessage.GET_FILE_CONTENT.name())) {
+                            sendFile = true;
+                        } else if (message.equals(ServerMessage.FILE_VERSION_EXISTS.name())) {
+                            sendFile = false;
                         }
                     }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
-
 
             if (sendFile) {
                 //send file
-                try {
-                    //open new input stream
-                    try (FileInputStream inputStream = new FileInputStream(file)) {
+                //open new input stream
+                try (FileInputStream inputStream = new FileInputStream(file)) {
 
-                        byte[] buffer = new byte[main.config.Properties.bufferSize];
-                        int numberOfReadBytes = 0;
-                        long bytesToSend = fileSize;
-                        long bytesSent = 0;
+                    byte[] buffer = new byte[main.config.Properties.bufferSize];
+                    int numberOfReadBytes = 0;
+                    long bytesToSend = fileSize;
+                    long bytesSent = 0;
 
-                        //-1 if there is no more data because the end of the file has been reached
-                        while (bytesToSend > 0
-                                && (numberOfReadBytes = inputStream.read(buffer, 0, (int) Math.min(buffer.length, bytesToSend))) != -1) {
+                    //-1 if there is no more data because the end of the file has been reached
+                    while (bytesToSend > 0
+                            && (numberOfReadBytes = inputStream.read(buffer, 0, (int) Math.min(buffer.length, bytesToSend))) != -1) {
 
-                            outputStream.write(buffer,0,numberOfReadBytes);
-                            bytesToSend -= numberOfReadBytes;
-                            bytesSent += numberOfReadBytes;
-                            //update statistics
-                            this.updateProgress(bytesSent, fileSize);
-                        }
-                    }//close streams
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                        outputStream.write(buffer, 0, numberOfReadBytes);
+                        bytesToSend -= numberOfReadBytes;
+                        bytesSent += numberOfReadBytes;
+                        //update statistics
+                        this.updateProgress(bytesSent, fileSize);
+                    }
+                }//close streams
+
 
                 //update server list in Javafx thread
-                Platform.runLater(()-> {
+                Platform.runLater(() -> {
                             appController.addFileToFilesOnServer(file);
                         }
                 );
@@ -157,11 +152,48 @@ public class BackupTask extends Task<Boolean> {
                             "Selected version file already exists on local system file."
                     );
                 });
-                updateProgress(fileSize,fileSize);
+                updateProgress(fileSize, fileSize);
             }
         }
         closeConnection();
         return true;
+    }
+
+    /**
+     * Method responsible for making verification whether files in filesToArchive list really exist on local file system.
+     * If file not exist, remove it from list and view
+     * @return new list of existing files to archive
+     */
+    private ArrayList<File> removeNonExistingFilesFromList(){
+        ArrayList<File> existingFilesToArchive = new ArrayList<>();
+        StringBuilder logString = new StringBuilder();
+
+        for (File file : filesToArchive) {
+            if (file.exists()) {
+                existingFilesToArchive.add(file);
+            } else {
+                logString.append(file.getAbsolutePath() + "\n");
+            }
+        }
+
+        //update view
+        Platform.runLater(() -> {
+            appController.updateFilesToArchiveList(existingFilesToArchive);
+        });
+
+        //inform user
+        if (existingFilesToArchive.size() != filesToArchive.size()) {
+            Platform.runLater(() -> {
+                appController.showInformationDialog(
+                        "Some files not exist on local file system",
+                        "Files was removed from list before process begin.\n" +
+                                "Files which not exist:\n" +
+                                logString.toString()
+                );
+            });
+        }
+
+        return existingFilesToArchive;
     }
 
     /**

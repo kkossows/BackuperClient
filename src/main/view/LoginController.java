@@ -191,7 +191,13 @@ public class LoginController implements Initializable{
                                         && globalConfig.getSavedServerPortNumber() == Integer.parseInt(tx_serverPort.getText().trim())
                                         && globalConfig.getSavedUsername().equals(tx_username.getText())
                                         && globalConfig.getSavedPassword().equals(tx_password.getText())) {
+
+                                    //update user flag
                                     currentUser.setAutoCompleteOn(true);
+                                }
+                                else {
+                                    //update user flag
+                                    currentUser.setAutoCompleteOn(false);
                                 }
                             }
 

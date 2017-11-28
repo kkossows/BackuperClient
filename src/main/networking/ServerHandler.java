@@ -154,18 +154,13 @@ public class ServerHandler {
      * @param file
      * @return operation result (true - success)
      */
-    public boolean removeSelectedFile(File file){
-        try {
-            out.println(ClientMessage.REMOVE_FILE.name());
-            if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
-                out.println(file.getAbsolutePath());
-                if (in.readLine().equals(ServerMessage.FILE_REMOVED.name())) {
-                    return true;
-                }
+    public boolean removeSelectedFile(File file) throws IOException {
+        out.println(ClientMessage.REMOVE_FILE.name());
+        if (in.readLine().equals(ServerMessage.GET_FILE_PATH.name())) {
+            out.println(file.getAbsolutePath());
+            if (in.readLine().equals(ServerMessage.FILE_REMOVED.name())) {
+                return true;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
         }
         return false;
     }
@@ -194,16 +189,11 @@ public class ServerHandler {
      * Method responsible for deleting user on server side.
      * @return operation result
      */
-    public boolean deleteUser() {
+    public boolean deleteUser() throws IOException {
         //rest of functionality handled byAppController
-        try {
-            out.println(ClientMessage.DELETE_USER.name());
-            if (in.readLine().equals(ServerMessage.DELETE_USER_FINISHED.name())) {
-                return true;
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
+        out.println(ClientMessage.DELETE_USER.name());
+        if (in.readLine().equals(ServerMessage.DELETE_USER_FINISHED.name())) {
+            return true;
         }
         return false;
     }
