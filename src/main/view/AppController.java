@@ -652,31 +652,11 @@ public class AppController implements Initializable {
             //show waiting screen
             showWaitingScene();
 
-            Task<Boolean> deleteProfile = new Task<Boolean>() {
-                @Override
-                protected Boolean call() throws Exception {
-                    updateMessage("DELETING PROCESS - Please wait...");
+            //create new task
+            Task<Boolean> deleteProfile = new DeleteProfileTask(
+                    user
+            );
 
-                    boolean isSucceeded = user.getServerHandler().deleteUser();
-                    if (isSucceeded){
-                        //update view label
-                        updateMessage("USER DELETED. Application will close soon.");
-
-                        //close session connection
-                        user.getServerHandler().closeConnection();
-
-                        //delete local files
-                        ConfigDataManager.removeUserConfig(lb_username.getText());
-                        if(user.isAutoCompleteOn()){
-                            ConfigDataManager.createGlobalConfig(new GlobalConfig());
-                        }
-
-                        //some visual effects
-                        Thread.sleep(300);
-                    }
-                    return isSucceeded;
-                }
-            };
             deleteProfile.setOnSucceeded(event -> {
                 if(deleteProfile.getValue()){
                     showInformationDialog(
