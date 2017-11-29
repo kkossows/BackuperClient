@@ -800,6 +800,7 @@ public class AppController implements Initializable {
             @Override
             public void run() {
                 Platform.exit();
+                System.exit(0);
             }
         }, 3 * 1000);
     }
